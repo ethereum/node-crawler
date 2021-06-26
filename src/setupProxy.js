@@ -4,7 +4,7 @@ const fetch = require('node-fetch');
 let clients;
 
 async function cacheApiCall() {
-  const response = await fetch('https://crawler.tmio.io/rest/clients');
+  const response = await fetch(process.env.CRAWLER_API_URL);
   clients = await response.json()
 }
 
