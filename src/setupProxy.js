@@ -1,4 +1,3 @@
-const cron = require('node-cron');
 const fetch = require('node-fetch');
 
 let clients;
@@ -8,11 +7,7 @@ async function cacheApiCall() {
   clients = await response.json()
 }
 
-cacheApiCall()
-
-cron.schedule('* * * * *', async () => {
-  await cacheApiCall() 
-});
+// cacheApiCall()
 
 module.exports = function(app) {
   app.get('/rest/clients', (req, res) => {

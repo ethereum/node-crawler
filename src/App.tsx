@@ -6,6 +6,7 @@ import { scaleOrdinal } from 'd3-scale';
 import { schemeCategory10 } from 'd3-scale-chromatic';
 
 import './App.css';
+import { ClientApiResponse, ClientDetail, ClientsProcessor } from './pipeline/DataProcessor';
 
 
 const colors = scaleOrdinal(schemeCategory10).range();
@@ -19,29 +20,8 @@ const ClientParser = {
   'ethereumjs': '5.4.1'
 }
 
-interface Runtime {
-  name: string
-  version: string
-}
-
-interface ClientDetail {
-  label?: string
-  version?: string
-  os: string
-  runtime?: Runtime
-}
-
 interface Client extends ClientDetail {
   id: string
-}
-
-function parseVersion(version: string) {
-  console.log(version)
-    return version
-}
-
-function parseOs(os: string) {
-  return os
 }
 
 const errors: any = {
@@ -63,79 +43,7 @@ function cache(index: any, name: string, version: string) {
   }
 }
 
-function parseRuntime(runtime: string): Runtime | undefined {
-  let matches = runtime.match(/([a-zA-Z]+)([\d+.?]+)/)
-  if (matches) {
-    const [, name, version] = matches
 
-    return {
-      name,
-      version
-    }
-  }
-  
-  matches = runtime.match(/java-(\d+)/)
-  if (matches) {
-    return {
-      name: 'java',
-      version: matches[1]
-    }
-  }
-
-  errors.runtime.push(runtime)
-  return undefined
-}
-
-
-function parseRest(rest: string): ClientDetail | undefined {
-  let matches = rest.match(/(.+)\/(.+)\/(.+)\/(.+)/)
-  if (matches) {
-    return {
-      label: matches[1],
-      version: parseVersion(matches[2]),
-      os: parseOs(matches[3]),
-      runtime: parseRuntime(matches[4]),
-    }
-  }
-  
-  matches = rest.match(/(.+)\/(.+)\/(.+)/)
-  if (matches) {
-    return {
-      version: parseVersion(matches[1]),
-      os: parseOs(matches[2]),
-      runtime: parseRuntime(matches[3]),
-    }
-  }
-
-  matches = rest.match(/(.+)\/(.+)/)
-  if (matches) {
-    return {
-      os: parseOs(matches[1]),
-      runtime: parseRuntime(matches[2]),
-    }
-  }
-
-  errors.parse.append(rest)
-  return undefined
-}
-
-function parseClientId(clientId: string): Client | undefined {
-  const matches = clientId.match(/(\w+)\/(.+)/)
-  if (matches) {
-    const rest = parseRest(matches[2])
-    if (!rest) {
-        return undefined
-    }
-
-    return {
-      id: matches[1],
-      ...rest
-    }
-  }
-
-  errors.clientid.append(clientId)
-  return undefined
-}
 
 interface ClientBucket {
   count: number,
@@ -149,14 +57,12 @@ interface ClientArrayItem {
   bucket: ClientBucket[]
 }
 
-interface ClientApiResponse {
-  clientId: string
-  count: number
-}
 
 interface LoadingResponse {
   status: 'loading'
 }
+
+
 
 function App() {
   const [loading, setLoading] = useState<string>('loading data')
@@ -170,7 +76,7 @@ function App() {
       
       const runtimeIndex: any = {}
       const nameIndex: any = {}
-
+/*
       const response = await fetch('/rest/clients');
       const jsonResponse : ClientApiResponse[] | LoadingResponse = await response.json()
       if ((jsonResponse as LoadingResponse).status === 'loading') {
@@ -178,61 +84,78 @@ function App() {
         return;
       }
       setLoading('preparing data')
-
+*/
+      const jsonResponse = [
+        { clientId: "Geth/v1.10.3-stable-991384a7/linux-amd64/go1.16.3", count: 2 },
+        { clientId: "Geth/v1.10.4-stable-aa637fd3/linux-amd64/go1.16.4", count: 5 },
+        { clientId: "Geth/v1.10.4-stable-aa637fd3/linux-amd64/go1.15.5", count: 2 },
+        { clientId: "Geth/v1.10.4-stable/linux-amd64/go1.16.4", count: 1 },
+        { clientId: "Geth/v1.10.4-stable-aa637fd3/linux-amd64/go1.16.4", count: 2 },
+        { clientId: "Geth/v1.10.4-omnibus-3dd33368/linux-amd64/go1.16.5", count: 2 },
+        { clientId: "besu/v21.7.0-RC1/linux-x86_64/corretto-java-11", count: 14 },
+        { clientId: "erigon/v2021.06.5-alpha-a0694dd3/linux-amd64/go1.16.5", count: 1 },
+        { clientId: "OpenEthereum/v3.2.6-stable-f9f4926-20210514/x86_64-linux-gnu/rustc1.52.1", count: 1 },
+        { clientId: "Nethermind/v1.10.73-0-b8ab96510-20210625/X64-Linux/5.0.6", count: 1 },
+        { clientId: "Geth/goerli/v1.10.4-unstable-966ee3ae-20210528/linux-amd64/go1.16.4", count: 1}
+      ];
+      
       const clients = jsonResponse as ClientApiResponse[]
-      const clientBuckets = new Map<string, ClientBucket[]>()
-      for (let c in clients) {
-        const { clientId, count } = clients[c]
-        const client = parseClientId(clientId)
+      console.log(clients)
+      const processor = ClientsProcessor(clients, (error) => console.error(error))
+      console.log(processor)
+      // const clientBuckets = new Map<string, ClientBucket[]>()
+      // for (let c in clients) {
+      //   const { clientId, count } = clients[c]
+      //   const client = parseClientId(clientId)
 
-        if (!client) {
-          continue
-        }
+      //   if (!client) {
+      //     continue
+      //   }
         
-        if (client.runtime) {
-          for (let a = 0; a < count; a++)
-            cache(runtimeIndex, client.runtime.name, client.runtime.version)
-        }
+      //   if (client.runtime) {
+      //     for (let a = 0; a < count; a++)
+      //       cache(runtimeIndex, client.runtime.name, client.runtime.version)
+      //   }
 
-        if (clientBuckets.has(client.id)) {
-          clientBuckets.get(client.id)?.push({ count, rest: client })
-        } else {
-          clientBuckets.set(client.id, [ { count, rest: client } ])
-        }
-      }
+      //   if (clientBuckets.has(client.id)) {
+      //     clientBuckets.get(client.id)?.push({ count, rest: client })
+      //   } else {
+      //     clientBuckets.set(client.id, [ { count, rest: client } ])
+      //   }
+      // }
 
-      setLoading('rendering data')
-      console.log(clientBuckets.keys())
+      // setLoading('rendering data')
+      // console.log(clientBuckets.keys())
 
-      const bucketList: ClientArrayItem[] = []
+      // const bucketList: ClientArrayItem[] = []
 
-      for (const [id, value] of clientBuckets.entries()) {
-        const totalClients = value.reduce((prev, current) => {return prev + current.count}, 0)
-        bucketList.push({
-          count: totalClients,
-          name: id,
-          bucket: value
-        })
-      }
+      // for (const [id, value] of clientBuckets.entries()) {
+      //   const totalClients = value.reduce((prev, current) => {return prev + current.count}, 0)
+      //   bucketList.push({
+      //     count: totalClients,
+      //     name: id,
+      //     bucket: value
+      //   })
+      // }
 
-      bucketList.sort((a, b) => {
-        return b.count - a.count
-      })
+      // bucketList.sort((a, b) => {
+      //   return b.count - a.count
+      // })
 
-      console.log('client buckets', bucketList)
-      console.log('runtimes', runtimeIndex)
-      const runtimeData: any = Object.keys(runtimeIndex).map(key => {
-        const runtime  = runtimeIndex[key]
-        const versions = Object.keys(runtime)
-        return {
-          name: key,
-          value: versions.reduce((cur, prev) => cur + runtime[prev], 0)
-        }
-      })
-      console.log(runtimeData)
-      setRuntimes(runtimeData)
+      // console.log('client buckets', bucketList)
+      // console.log('runtimes', runtimeIndex)
+      // const runtimeData: any = Object.keys(runtimeIndex).map(key => {
+      //   const runtime  = runtimeIndex[key]
+      //   const versions = Object.keys(runtime)
+      //   return {
+      //     name: key,
+      //     value: versions.reduce((cur, prev) => cur + runtime[prev], 0)
+      //   }
+      // })
+      // console.log(runtimeData)
+      // setRuntimes(runtimeData)
 
-      setClients(bucketList)
+      // setClients(bucketList)
     }
 
     run()
@@ -292,7 +215,6 @@ const onPieEnter = (data: any, index: number, e: React.MouseEvent) => {
 
 const renderLabelContent: React.FunctionComponent = (props: any) => {
   const { name, value, percent, x, y, midAngle } = props;
-  console.log(props)
   return (
     <g transform={`translate(${x}, ${y})`} textAnchor={ (midAngle < -90 || midAngle >= 90) ? 'end' : 'start'}>
       <text x={0} y={0}>{`${name}`}</text>
