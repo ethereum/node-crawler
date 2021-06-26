@@ -194,6 +194,18 @@ Get the details of a specific client
            }
         ]
       }
+  ],
+  runtime: [
+      {
+        name: "go",
+        version: 1.14,
+        count: 10
+      },
+      {
+        name: "go",
+        version: 1.15,
+        count: 5
+      }
   ]
 }
       </pre></td>
