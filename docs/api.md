@@ -212,3 +212,53 @@ Get the details of a specific client
   </tr>
 </table>
 
+
+### Stretch: Historical Data
+
+Get the list of historical entry points given a specific filter. Note filter version is optional so we can send `filter=geth` for all versions or `filter=geth:1.10.2` for all version that includes that or greater!
+
+<table>
+  <tr>
+    <th>Method</th>
+    <td>GET</td>
+  </tr>
+  <tr>
+    <th>Query Params</th>
+    <td>
+      <table>
+        <tr>
+          <th>Param</th>
+          <th>Type</th>
+          <th>Required</th>
+        </tr>
+        <tr>
+          <td>since</td>
+          <td>[month|day|year|all]</td>
+          <td>false (default=month)</td>
+        </tr>
+        <tr>
+          <td>filter</td>
+          <td>[name]:[version],[name2]:[version2],[etcName]:[etcVersion]</td>
+          <td>true</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <th>Endpoint</th>
+    <td>/api/v1/historical?since=month&filter=<strong>"geth:1.10.4,nethermind:1.10.73"</strong
+></td>
+  </tr>
+  <tr>
+    <th>Response</th>
+    <td>
+      <pre>
+[
+  { date: "06-26-2021", geth: 4000, nethermind: 1000 }, 
+  { date: "06-25-2021", geth: 4100, nethermind: 900 }, 
+  { date: "06-24-2021", geth: 4200, nethermind: 800 }, 
+]
+      </pre></td>
+  </tr>
+</table>
+
