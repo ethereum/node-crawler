@@ -2,18 +2,20 @@ import { ClientsProcessor } from "./DataProcessor";
 
 test("processes full schema correctly", () => {
   const peers = [
-    { clientId: "Geth/v1.10.3-stable-991384a7/linux-amd64/go1.16.3", count: 2 },
-    { clientId: "Geth/v1.10.4-stable/linux-amd64/go1.16.4", count: 1 },
-    { clientId: "Geth/goerli/v1.10.4-unstable-966ee3ae-20210528/linux-amd64/go1.16.4", count: 1 },
-    { clientId: "Geth/c30khkq4no1is608bj70/v1.10.4-stable-aa637fd3/linux-amd64/go1.16.5", count: 1 },
+    { clientId: "Geth/v1.10.3-stable-991384a7/linux-amd64/go1.16.3", count: 5 },
+    { clientId: "Geth/v1.10.4-stable/linux-amd64/go1.16.4", count: 4 },
+    { clientId: "Geth/goerli/v1.10.4-unstable-966ee3ae-20210528/linux-amd64/go1.16.4", count: 3 },
+    { clientId: "Geth/c30khkq4no1is608bj70/v1.10.4-stable-aa637fd3/linux-amd64/go1.16.5", count: 2 },
   ];
    
   const errorCallback = jest.fn()
-  const processor = ClientsProcessor(peers, errorCallback)
+  const processor = ClientsProcessor(peers, errorCallback).getRaw()
   expect(processor).toHaveLength(peers.length)
   expect(errorCallback).not.toBeCalled()
 
   expect(processor[0]).toEqual({
+    count: 5,
+    primaryKey: 1,
     name: 'Geth',
     version: { 
       major: 1,
@@ -37,6 +39,8 @@ test("processes full schema correctly", () => {
   })
 
   expect(processor[1]).toEqual({
+    count: 4,
+    primaryKey: 2,
     name: 'Geth',
     version: { 
       major: 1,
@@ -59,6 +63,8 @@ test("processes full schema correctly", () => {
   })
 
   expect(processor[2]).toEqual({
+    count: 3,
+    primaryKey: 3,
     name: 'Geth',
     label: 'goerli',
     version: { 
@@ -92,7 +98,7 @@ test("processes runtimes correctly", () => {
   ];
    
   const errorCallback = jest.fn()
-  const processor = ClientsProcessor(peers, errorCallback)
+  const processor = ClientsProcessor(peers, errorCallback).getRaw()
   expect(processor).toHaveLength(peers.length)
   expect(errorCallback).not.toBeCalled()
   expect(processor.map(p => (p?.runtime))).toEqual([
@@ -110,7 +116,7 @@ test("processes os correctly", () => {
   ];
    
   const errorCallback = jest.fn()
-  const processor = ClientsProcessor(peers, errorCallback)
+  const processor = ClientsProcessor(peers, errorCallback).getRaw()
   expect(processor).toHaveLength(peers.length)
   expect(errorCallback).not.toBeCalled()
   console.log(processor.map(p => (p?.os)))

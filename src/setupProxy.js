@@ -7,7 +7,7 @@ async function cacheApiCall() {
   clients = await response.json()
 }
 
-// cacheApiCall()
+cacheApiCall()
 
 module.exports = function(app) {
   app.get('/rest/clients', (req, res) => {

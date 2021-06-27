@@ -1,4 +1,5 @@
 import matchAll from 'string.prototype.matchall'
+import { SortedMap } from './SortedMap';
 
 export interface ClientApiResponse {
   clientId: string;
@@ -24,14 +25,32 @@ export interface OperatingSytem {
   architecture: string;
 }
 
-export interface Client {
+export interface ClientDetail {
   label?: string;
   version?: Version;
   os?: OperatingSytem;
   runtime?: Runtime;
 }
 
+export interface Client extends ClientDetail {
+  primaryKey: number;
+  name: string;
+  count: number;
+}
+
+export interface ClientDatabase {
+  obj: {[key: number]: Client}
+  getClients(): GetClientResponse[]
+  getRaw(): Client[]
+}
+
+export interface GetClientResponse {
+  name: string
+  count: number
+}
+
 interface ParseParam {
+  raw: string
   primaryKey: number
   errorCallback: (entity: string, data: string, primaryKey: number) => void
 }
@@ -107,7 +126,7 @@ function parseRuntime(runtime: string, parseOpt: ParseParam): Runtime | undefine
   return undefined;
 }
 
-function parseRaw(raw: string, parseOpt: ParseParam): Client | undefined {
+function parseRaw(raw: string, parseOpt: ParseParam): ClientDetail | undefined {
   const tokenize = raw.split('/')
   let label: string | undefined
   let version: Version | undefined
@@ -147,32 +166,71 @@ function parseRaw(raw: string, parseOpt: ParseParam): Client | undefined {
 
 export function ClientsProcessor(
   data: ClientApiResponse[],
-  errorCallback: (entity: string, data: string, primaryKey: number) => void
-) {
+  errorCallback: (entity: string, data: string, clientId: string) => void
+): ClientDatabase {
 
-  const db = {
-    clients: []
-  }
+  const obj: {[key: number]: Client} = {}
 
   let primaryKey = 0
 
-  const parse = (item: ClientApiResponse) => {
+  const parse = (item: ClientApiResponse): Client | undefined => {
+    primaryKey++;
+    if (!item.clientId) {
+      errorCallback('parse', 'empty client id', '');
+      return undefined;
+    }
+
     const matches = item.clientId.match(/(?<name>\w+)\/(?<raw>.+)/);
     if (matches?.groups) {
-      const raw = parseRaw(item.clientId, { primaryKey, errorCallback });
+      const rawString = item.clientId.toLowerCase()
+      const raw = parseRaw(rawString, { primaryKey, errorCallback: (entity, data, pk) => {
+        errorCallback(entity, data, `${pk}: "${rawString}"`)
+      }, raw: rawString });
       if (!raw) {
         return undefined;
       }
 
       return {
+        primaryKey,
         name: matches.groups.name,
+        count: item.count,
         ...raw,
       };
     }
 
-    errorCallback('clientId', item.clientId, primaryKey);
+    errorCallback('parse', item.clientId, '');
     return undefined;
   };
 
-  return data.map((item) => parse(item));
+  
+  const getClients = (): GetClientResponse[] => {
+    const clientCache = SortedMap<string, number>((a, b) => b[1] - a[1])
+    
+    for (let a in obj) {
+      const client = obj[a]
+      clientCache.set(client.name, (clientCache.get(client.name) || 0) + client.count)
+    }
+
+    return clientCache.map(a => ({
+      name: a[0],
+      count: a[1]
+    }))
+  }
+
+  const getRaw = (): Client[] => {
+    return Object.keys(obj).map(o => obj[parseInt(o)])
+  }
+
+  data.forEach((item) => {
+    const parsedItem = parse(item)
+    if (parsedItem) {
+      obj[parsedItem.primaryKey] = parsedItem
+    }
+  })
+
+  return {
+    obj,
+    getRaw,
+    getClients
+  }
 }
