@@ -28,7 +28,7 @@ This is a debug endpoint that has the raw `clientId` details.
 
 ### MVP: Parsed Output
 
-Retreives the list of clients sturctured and strongly typed.
+Retreives the list of clients sturctured and strongly typed. Ordered by count.
 
 <table>
   <tr>
@@ -103,7 +103,7 @@ Retreives the list of clients sturctured and strongly typed.
 
 ### Stretch: Filtered Clients
 
-Gets the list of clients filtered
+Gets the list of clients filtered. Ordered by count.
 
 <table>
   <tr>
