@@ -5,8 +5,8 @@ import { PieChart, Pie, Legend, Cell, Tooltip, ResponsiveContainer, Sector,
 import { scaleOrdinal } from 'd3-scale';
 import { schemeCategory10 } from 'd3-scale-chromatic';
 
-import './App.css';
-import { ClientApiResponse, ClientsProcessor, GetClientResponse } from './pipeline/DataProcessor';
+import { ClientApiResponse, ClientsProcessor, GetClientResponse } from '../data/DataProcessor';
+import { useData } from '../data/DataContext';
 
 
 const colors = scaleOrdinal(schemeCategory10).range();
@@ -24,33 +24,15 @@ const ClientParser = {
 interface LoadingResponse {
   status: 'loading'
 }
-function App() {
-  const [loading, setLoading] = useState<string>('loading data')
+function Home() {
+  const data = useData()
   const [runtimes, setRuntimes] = useState([])
   const [clients, setClients] = useState<GetClientResponse[]>([])
   const [activeIndex, setActiveIndex] = useState(-1)
 
   useEffect(() => {
-    const run = async () => {
-
-      const response = await fetch('/rest/clients');
-      const jsonResponse : ClientApiResponse[] | LoadingResponse = await response.json()
-      if ((jsonResponse as LoadingResponse).status === 'loading') {
-        setLoading('still loading data')
-        return;
-      }
-
-      setLoading('preparing data')
-
-      const clients = jsonResponse as ClientApiResponse[]
-      const db = ClientsProcessor(clients, (entity: string, data: string, raw: string) => console.error(entity, data, raw))
-      
-      console.log(db.getRaw())
-      const topClients = db.getClients()
-      setClients(topClients)
-    }
-
-    run()
+    console.log(data.getRaw())
+    setClients(data.getClients())
   }, [])
 
   
@@ -117,12 +99,6 @@ const renderLabelContent: React.FunctionComponent = (props: any) => {
 
   return (
     <div >
-      <p>
-        {loading}
-      </p>
-      <p>
-        {activeIndex}
-      </p>
       <div className="pie-chart-wrapper" style={{ width: '100%', height: '1000px', backgroundColor: '#f5f5f5' }}>
           <PieChart width={400} height={400}>
             <Pie
@@ -165,4 +141,4 @@ const renderLabelContent: React.FunctionComponent = (props: any) => {
   );
 }
 
-export default App;
+export default Home;

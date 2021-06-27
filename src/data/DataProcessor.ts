@@ -49,6 +49,10 @@ export interface GetClientResponse {
   count: number
 }
 
+export interface LoadingResponse {
+  status: 'loading'
+}
+
 interface ParseParam {
   raw: string
   primaryKey: number
@@ -233,4 +237,10 @@ export function ClientsProcessor(
     getRaw,
     getClients
   }
+}
+
+export const EmptyDatabase: ClientDatabase = {
+  obj: {},
+  getClients: () => [],
+  getRaw: () => []
 }
