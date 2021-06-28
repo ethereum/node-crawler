@@ -206,7 +206,6 @@ export function ClientsProcessor(
     return undefined;
   };
 
-  
   const getClients = (): GetClientResponse[] => {
     const clientCache = SortedMap<string, number>((a, b) => b[1] - a[1])
     

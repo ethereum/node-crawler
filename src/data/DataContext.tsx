@@ -6,7 +6,6 @@ interface DataContextType extends ClientDatabase {
   isReady: boolean
 }
 
-
 const DataContext = createContext<DataContextType>({
   isReady: false,
   ...EmptyDatabase
@@ -36,7 +35,6 @@ const DataProvider = ({
        const response = await fetch(url);
        const jsonResponse : ClientApiResponse[] | LoadingResponse = await response.json()
 
-       
       if ((jsonResponse as LoadingResponse).status === 'loading') {
         return;
       }
