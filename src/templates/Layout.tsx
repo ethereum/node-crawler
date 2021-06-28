@@ -7,11 +7,11 @@ interface LayoutProps {
 
 export function Layout(props: LayoutProps) {
   return (
-    <Grid minH="100vh">
+    <VStack minH="100vh" align="flex-start" justify="flex-start">
       <Header />
-      <VStack spacing={8} p={8} align="flex-start">
+      <VStack spacing={8} p={8} >
         {props.children}
       </VStack>
-    </Grid>
+    </VStack>
   )
 }

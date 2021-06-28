@@ -40,11 +40,13 @@ export interface Client extends ClientDetail {
 
 export interface ClientDatabase {
   obj: {[key: number]: Client}
-  getClients(): GetClientResponse[]
+  getTopClients(): NameCountResponse[]
+  getTopRuntimes(): NameCountResponse[]
+  getTopOperatingSystems(): NameCountResponse[]
   getRaw(): Client[]
 }
 
-export interface GetClientResponse {
+export interface NameCountResponse {
   name: string
   count: number
 }
@@ -174,6 +176,8 @@ export function ClientsProcessor(
 ): ClientDatabase {
 
   const obj: {[key: number]: Client} = {}
+  const topRuntimes = new Map<string, number>()
+  const topOs = new Map<string, number>()
 
   let primaryKey = 0
 
@@ -194,6 +198,16 @@ export function ClientsProcessor(
         return undefined;
       }
 
+      if (raw.runtime) {
+        const runtimeName = raw.runtime.name || 'Unknown'
+        topRuntimes.set(runtimeName, (topRuntimes.get(runtimeName) || 0) + item.count)
+      }
+
+      if (raw.os) {
+        const osName = raw.os.vendor || 'Unknown'
+        topOs.set(osName, (topOs.get(osName) || 0) + item.count)
+      }
+
       return {
         primaryKey,
         name: matches.groups.name,
@@ -206,7 +220,7 @@ export function ClientsProcessor(
     return undefined;
   };
 
-  const getClients = (): GetClientResponse[] => {
+  const getTopClients = (): NameCountResponse[] => {
     const clientCache = SortedMap<string, number>((a, b) => b[1] - a[1])
     
     for (let a in obj) {
@@ -218,6 +232,22 @@ export function ClientsProcessor(
       name: a[0],
       count: a[1]
     }))
+  }
+
+  const getTopRuntimes = (): NameCountResponse[] => {
+    const runtimes = []
+    for (let [name, count] of topRuntimes) {
+      runtimes.push({name, count})
+    }
+    return runtimes
+  }
+
+  const getTopOs = (): NameCountResponse[] => {
+    const oses = []
+    for (let [name, count] of topOs) {
+      oses.push({name, count})
+    }
+    return oses
   }
 
   const getRaw = (): Client[] => {
@@ -234,12 +264,16 @@ export function ClientsProcessor(
   return {
     obj,
     getRaw,
-    getClients
+    getTopClients,
+    getTopRuntimes,
+    getTopOperatingSystems: getTopOs
   }
 }
 
 export const EmptyDatabase: ClientDatabase = {
   obj: {},
-  getClients: () => [],
-  getRaw: () => []
+  getRaw: () => [],
+  getTopClients: () => [],
+  getTopRuntimes: () => [],
+  getTopOperatingSystems: () => [],
 }

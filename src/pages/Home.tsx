@@ -7,9 +7,9 @@ import {
 import { scaleOrdinal } from 'd3-scale';
 import { schemeCategory10} from 'd3-scale-chromatic';
 
-import { GetClientResponse } from '../data/DataProcessor';
+import { NameCountResponse } from '../data/DataProcessor';
 import { useData } from '../data/DataContext';
-import { Box, Heading, others } from '@chakra-ui/react';
+import { Box, Grid, GridItem, Heading, others } from '@chakra-ui/react';
 import { Card } from '../atoms/Card';
 
 
@@ -30,20 +30,23 @@ interface LoadingResponse {
 }
 function Home() {
   const data = useData()
-  const [runtimes, setRuntimes] = useState([])
-  const [clients, setClients] = useState<GetClientResponse[]>([])
-  const [topClients, setTopClients] = useState<GetClientResponse[]>([])
+  const [topOperatingSystems, setTopOperatingSystems] = useState<NameCountResponse[]>([])
+  const [topRuntimes, setTopRuntimes] = useState<NameCountResponse[]>([])
+  const [topClients, setTopClients] = useState<NameCountResponse[]>([])
   const [activeIndex, setActiveIndex] = useState(-1)
 
   useEffect(() => {
-    const parsedClients = data.getClients()
+    const parsedClients = data.getTopClients()
     const topClient = parsedClients.slice(0, 10)
     const othersSum = parsedClients.slice(10).reduce((prev, curr) => {
       return prev + curr.count
     }, 0)
     
     topClient.push({name: 'others', count: othersSum})
-    setClients(topClient)
+    setTopClients(topClient)
+
+    setTopRuntimes(data.getTopRuntimes())
+    setTopOperatingSystems(data.getTopOperatingSystems())
   }, [])
 
 
@@ -109,55 +112,89 @@ function Home() {
   };
 
   return (
-    <Box>
+    <Grid gridGap="8" templateColumns="repeat(2, 1fr)" >
+      <GridItem colSpan={2}>
+        <Card>
+          <Heading size="sm">Popular Clients</Heading>
+          <Box flex="1">
+            <BarChart
+              width={1000}
+              height={topClients.length * 50}
+              data={topClients}
+              layout="vertical"
+            >
+              <XAxis type="number" />
+              <YAxis dataKey="name" type="category" />
+              <Tooltip cursor={false} />
+              <Bar dataKey="count">
+                {topClients.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={colors[index % 10]} />
+                ))}
+                <LabelList position="right" />
+              </Bar>
+            </BarChart>
+          </Box>
+        </Card>
+      </GridItem>
+
       <Card>
-        <Heading size="sm">Popular Clients</Heading>
+        <Heading size="sm">Popular Operating Systems</Heading>
         <Box flex="1">
-          <BarChart
-            width={500}
-            height={clients.length * 50}
-            data={clients}
-            layout="vertical"
-          >
-            <XAxis type="number" />
-            <YAxis dataKey="name" type="category" />
-            <Tooltip cursor={false} />
-            <Bar dataKey="count">
-              {clients.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={colors[index % 10]} />
-              ))}
-              <LabelList position="right" />
-            </Bar>
-          </BarChart>
+          <PieChart width={500} height={300}>
+            <Pie
+              data={topOperatingSystems}
+              dataKey="count"
+              startAngle={180}
+              endAngle={-180}
+              innerRadius={60}
+              minAngle={20}
+              outerRadius={100}
+              paddingAngle={10}
+              label={renderLabelContent}
+            >
+              {
+                topOperatingSystems.map((entry, index) => (
+                  <Cell
+                    key={`slice-${index}`}
+                    fill={colors[index % 10] as string}
+                  />
+                ))
+              }
+              <Label value="Operating Systems" position="center" />
+            </Pie>
+          </PieChart>
         </Box>
       </Card>
 
-      <div className="pie-chart-wrapper" style={{ width: '100%', height: '1000px' }}>
-        <PieChart width={400} height={400}>
-          <Pie
-            data={runtimes}
-            dataKey="value"
-            startAngle={180}
-            endAngle={-180}
-            innerRadius={60}
-            outerRadius={80}
-            paddingAngle={10}
-            label={renderLabelContent}
-          >
-            {
-              runtimes.map((entry, index) => (
-                <Cell
-                  key={`slice-${index}`}
-                  fill={colors[index % 10] as string}
-                />
-              ))
-            }
-            <Label value="Runtimes" position="center" />
-          </Pie>
-        </PieChart>
-       
-      </div>
-    </Box >
+      <Card>
+        <Heading size="sm">Popular Client Runtimes</Heading>
+        <Box flex="1">
+          <PieChart width={500} height={300}>
+            <Pie
+              data={topRuntimes}
+              dataKey="count"
+              startAngle={180}
+              endAngle={-180}
+              innerRadius={60}
+              outerRadius={100}
+              paddingAngle={20}
+              minAngle={20}
+              label={renderLabelContent}
+            >
+              {
+                topRuntimes.map((entry, index) => (
+                  <Cell
+                    key={`slice-${index}`}
+                    fill={colors[index % 10] as string}
+                  />
+                ))
+              }
+              <Label value="Runtimes" position="center" />
+            </Pie>
+          </PieChart>
+        </Box>
+      </Card>
+    </Grid>
   );
 }
 
