@@ -17,19 +17,18 @@ async function writeCache(data) {
 
 async function cacheCall() {
   return new Promise((resolve, reject) => {
-
     fs.readFile('./clients.json', 'utf-8', (err, data) => {
       if (err) {
         reject(err)
       } else {
-        resolve(JSON.parse(data))
+        clients = JSON.parse(data)
+        resolve(clients)
       }
     })
   })
 }
 
 async function apiCall() {
-  
   try {
     const response = await fetch(process.env.CRAWLER_API_URL);
     clients = await response.json()
@@ -37,17 +36,18 @@ async function apiCall() {
       await writeCache(clients)
       return clients
     } else {
-      console.error('Clients was empty, read from cache');
+      console.info('Clients was empty, read from cache.');
       return cacheCall()
     }
   } catch (e) {
-    console.error('Tuweni API is down, read from cache');
+    console.info('Tuweni API is down, read from cache.');
     return cacheCall()
   }
 }
 
 async function fetchClients() {
   if (clients && clients.length) {
+    console.info('Clients read from cache.');
     return clients
   }
 
