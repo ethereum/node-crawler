@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   PieChart, Pie, Cell, Tooltip,
-  Label, LabelList, Bar, BarChart, XAxis, YAxis
+  LabelList, Bar, BarChart, XAxis, YAxis
 } from 'recharts';
 
 import { scaleOrdinal } from 'd3-scale';
@@ -91,7 +91,7 @@ function Home() {
               dataKey="count"
               startAngle={180}
               endAngle={-180}
-              innerRadius={60}
+              innerRadius={30}
               minAngle={20}
               outerRadius={100}
               paddingAngle={10}
@@ -105,7 +105,6 @@ function Home() {
                   />
                 ))
               }
-              <Label value="Operating Systems" position="center" />
             </Pie>
           </PieChart>
         </Box>
@@ -120,7 +119,7 @@ function Home() {
               dataKey="count"
               startAngle={180}
               endAngle={-180}
-              innerRadius={60}
+              innerRadius={30}
               outerRadius={100}
               paddingAngle={20}
               minAngle={20}
@@ -134,7 +133,6 @@ function Home() {
                   />
                 ))
               }
-              <Label value="Runtimes" position="center" />
             </Pie>
           </PieChart>
         </Box>
