@@ -200,6 +200,9 @@ export function ClientsProcessor(
 
       if (raw.runtime) {
         const runtimeName = raw.runtime.name || 'Unknown'
+        if (!raw.runtime.name) {
+          console.log(raw.runtime.name, item.clientId)
+        }
         topRuntimes.set(runtimeName, (topRuntimes.get(runtimeName) || 0) + item.count)
       }
 

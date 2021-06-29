@@ -1,4 +1,4 @@
-import { Box, Grid, HStack, Text} from "@chakra-ui/react";
+import { Grid, HStack, Text} from "@chakra-ui/react";
 import { Logo } from "../atoms/Logo";
 import { ColorModeSwitcher } from "./ColorModeSwitcher";
 

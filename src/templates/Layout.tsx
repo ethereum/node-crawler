@@ -1,4 +1,4 @@
-import { Box, Grid, VStack, Code, Link, Text } from "@chakra-ui/react";
+import { VStack } from "@chakra-ui/react";
 import { Header } from "../organisms/Header";
 
 interface LayoutProps {

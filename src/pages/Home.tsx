@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Sector,
+  PieChart, Pie, Cell, Tooltip,
   Label, LabelList, Bar, BarChart, XAxis, YAxis
 } from 'recharts';
 
@@ -9,32 +9,27 @@ import { schemeCategory10} from 'd3-scale-chromatic';
 
 import { NameCountResponse } from '../data/DataProcessor';
 import { useData } from '../data/DataContext';
-import { Box, Grid, GridItem, Heading, others, useColorMode, useColorModeValue } from '@chakra-ui/react';
+import { Box, Grid, GridItem, Heading, useColorModeValue } from '@chakra-ui/react';
 import { Card } from '../atoms/Card';
 
 
 const colors = scaleOrdinal(schemeCategory10).range();
 
-const ClientParser = {
-  'Geth': '1.10.4',
-  'Nethermind': '1.10.73',
-  'turbogeth': '2021.06.04-alpha',
-  'besu': '21.7.0-RC1',
-  'OpenEthereum': '3.3.0-rc2',
-  'ethereumjs': '5.4.1'
-}
+// const ClientParser = {
+//   'Geth': '1.10.4',
+//   'Nethermind': '1.10.73',
+//   'turbogeth': '2021.06.04-alpha',
+//   'besu': '21.7.0-RC1',
+//   'OpenEthereum': '3.3.0-rc2',
+//   'ethereumjs': '5.4.1'
+// }
 
-
-interface LoadingResponse {
-  status: 'loading'
-}
 function Home() {
   const color = useColorModeValue("gray.800", "white")
   const data = useData()
   const [topOperatingSystems, setTopOperatingSystems] = useState<NameCountResponse[]>([])
   const [topRuntimes, setTopRuntimes] = useState<NameCountResponse[]>([])
   const [topClients, setTopClients] = useState<NameCountResponse[]>([])
-  const [activeIndex, setActiveIndex] = useState(-1)
 
   useEffect(() => {
     const parsedClients = data.getTopClients()
@@ -48,7 +43,7 @@ function Home() {
 
     setTopRuntimes(data.getTopRuntimes())
     setTopOperatingSystems(data.getTopOperatingSystems())
-  }, [])
+  }, [data])
 
   const renderLabelContent: React.FunctionComponent = (props: any) => {
     const { name, value, percent, x, y, midAngle } = props;
