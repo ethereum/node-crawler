@@ -1,4 +1,4 @@
-# Ethereum Node Crawler UI
+# Ethereum Node Stats
 
 Will showcase which nodes are ready for London Fork, will be customizable to an fork.
 https://blog.ethereum.org/2021/06/18/london-testnets-announcement/

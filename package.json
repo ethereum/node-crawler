@@ -1,5 +1,5 @@
 {
-  "name": "ethereum-crawler-ui",
+  "name": "ethereum-node-stats",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
