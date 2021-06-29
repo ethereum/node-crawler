@@ -103,7 +103,7 @@ Retreives the list of clients sturctured and strongly typed. Ordered by count.
 
 ### Stretch: Filtered Clients
 
-Gets the list of clients filtered. Ordered by count.
+Gets the list of clients filtered. Ordered by count. You can add more than one filter.
 
 <table>
   <tr>
@@ -121,7 +121,7 @@ Gets the list of clients filtered. Ordered by count.
         </tr>
         <tr>
           <td>filter</td>
-          <td>[name]:[version],[name2]:[version2],[etcName]:[etcVersion]</td>
+          <td>Filter</td>
           <td>true</td>
         </tr>
       </table>
@@ -129,7 +129,7 @@ Gets the list of clients filtered. Ordered by count.
   </tr>
   <tr>
     <th>Endpoint</th>
-    <td>/api/v1/clients?filter=<strong>"geth:1.10.4,nethermind:1.10.73,turbogeth:2021.06.04-alpha,besu:21.7.0-RC1,openethereum:3.3.0-rc2,ethereumjs:5.4.1"</strong
+    <td>/api/v1/clients?filter=<strong>TBD"</strong
 ></td>
   </tr>
   <tr>
@@ -238,7 +238,7 @@ Get the list of historical entry points given a specific filter. Note filter ver
         </tr>
         <tr>
           <td>filter</td>
-          <td>[name]:[version],[name2]:[version2],[etcName]:[etcVersion]</td>
+          <td>Filter</td>
           <td>true</td>
         </tr>
       </table>
@@ -246,7 +246,7 @@ Get the list of historical entry points given a specific filter. Note filter ver
   </tr>
   <tr>
     <th>Endpoint</th>
-    <td>/api/v1/historical?since=month&filter=<strong>"geth:1.10.4,nethermind:1.10.73"</strong
+    <td>/api/v1/historical?since=month&filter=<strong>TBD</strong
 ></td>
   </tr>
   <tr>
@@ -262,3 +262,7 @@ Get the list of historical entry points given a specific filter. Note filter ver
   </tr>
 </table>
 
+
+## Filter Schema design
+
+TBD
