@@ -11,32 +11,31 @@ import { ClientResponse } from '../data/DataProcessor';
 import { useData } from '../data/DataContext';
 import { Box, Grid, GridItem, Heading, useColorModeValue } from '@chakra-ui/react';
 import { Card } from '../atoms/Card';
-import { useHistory } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Loader } from '../organisms/Loader';
 
 const colors = scaleOrdinal(schemeCategory10).range();
 
 function Home() {
-  const history = useHistory()
+  const { id } = useParams<{ id: string }>();
   const color = useColorModeValue("gray.800", "white")
   const db = useData()
   const [data, setData] = useState<ClientResponse>()
 
   useEffect(() => {
-    const parsedClients = db.queryData({showOperatingSystemArchitecture: false, showRuntimeVersion: false})
-    const topClient = parsedClients.clients.slice(0, 10)
-    const othersSum = parsedClients.clients.slice(10).reduce((prev, curr) => {
+    const parsedData = db.queryData({showOperatingSystemArchitecture: false, showRuntimeVersion: false}, [{name: id}])
+    const topClient = parsedData.versions.slice(0, 10)
+    const othersSum = parsedData.versions.slice(10).reduce((prev, curr) => {
       return prev + curr.count
     }, 0)
     
     topClient.push({name: 'others', count: othersSum})
-    parsedClients.clients = topClient
-    setData(parsedClients)
-
-  }, [db])
+    parsedData.versions = topClient
+    setData(parsedData)
+  }, [id, db])
 
   if (!data) {
-    return <Loader>Processing data</Loader>
+    return <Loader>Processing {id} data</Loader>
   }
   
   const renderLabelContent: React.FunctionComponent = (props: any) => {
@@ -49,29 +48,25 @@ function Home() {
     );
   };
 
-  const onClientClick = (e:any) => {
-    history.push(`/${e.activePayload[0].payload.name}`)
-  }
-  
   return (
     <Grid gridGap="8" templateColumns="repeat(2, 1fr)" >
+      <Heading>{id}</Heading>
       <GridItem colSpan={2}>
         <Card>
-          <Heading size="sm">Popular Clients</Heading>
+          <Heading size="sm">Top Versions</Heading>
           <Box flex="1" mt="4">
             <BarChart
               width={1000}
-              height={data.clients.length * 50}
-              data={data.clients}
+              height={(data.versions.length  || 0) * 50}
+              data={data.versions}
               layout="vertical"
               margin={{left: 60}}
-              onClick={onClientClick}
             >
               <XAxis type="number"  stroke={color}/>
               <YAxis dataKey="name" type="category" stroke={color}/>
               <Tooltip cursor={false} />
               <Bar dataKey="count">
-                {data.clients.map((entry, index) => (
+                {data.versions.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={colors[index % 10]} />
                 ))}
                 <LabelList position="right" />
@@ -91,9 +86,9 @@ function Home() {
               startAngle={180}
               endAngle={-180}
               innerRadius={30}
-              minAngle={20}
               outerRadius={100}
-              paddingAngle={10}
+              paddingAngle={data.operatingSystems.length == 1 ? 0 : 10}
+              minAngle={data.operatingSystems.length == 1 ? 0 : 20}
               label={renderLabelContent}
             >
               {
@@ -120,8 +115,8 @@ function Home() {
               endAngle={-180}
               innerRadius={30}
               outerRadius={100}
-              paddingAngle={20}
-              minAngle={20}
+              paddingAngle={data.runtimes.length == 1 ? 0 : 20}
+              minAngle={data.runtimes.length == 1 ? 0 : 20}
               label={renderLabelContent}
             >
               {

@@ -7,6 +7,11 @@ export interface ClientApiResponse {
   count: number;
 }
 
+export interface Option {
+  showOperatingSystemArchitecture?: boolean
+  showRuntimeVersion?: boolean
+}
+
 export interface Filter {
   name?: string
   version?: Partial<Version>
@@ -46,11 +51,16 @@ export interface Client extends ClientDetail {
   count: number;
 }
 
+export interface ClientResponse {
+  clients: NameCountResponse[]
+  versions: NameCountResponse[]
+  operatingSystems: NameCountResponse[]
+  runtimes: NameCountResponse[]
+}
+
 export interface ClientDatabase {
   obj: {[key: number]: Client}
-  getTopClients(filters?: Filter[]): NameCountResponse[]
-  getTopRuntimes(filters?: Filter[]): NameCountResponse[]
-  getTopOperatingSystems(filters?: Filter[]): NameCountResponse[]
+  queryData(option?: Option, filters?: Filter[]): ClientResponse
   getRaw(): Client[]
 }
 
@@ -79,7 +89,7 @@ const osMapping: { [key: string]: string } = {
 };
 
 function tryParseNumber(input: string): number | undefined  {
-  return parseInt(input) || undefined
+  return parseInt(input)
 }
 
 function parseVersion(version: string, parseOpt: ParseParam): Version | undefined {
@@ -94,12 +104,12 @@ function parseVersion(version: string, parseOpt: ParseParam): Version | undefine
   const patch = tryParseNumber(matches.groups.patch)
   const tag = matches.groups.tag
   const build = matches.groups.build
-  const date = matches.groups.date
+  const date = matches.groups.EmptyDatabase
 
   return {
     major: parseInt(matches.groups.major),
-    ...minor && { minor },
-    ...patch && { patch },
+    ...minor !== undefined && { minor },
+    ...patch !== undefined  && { patch },
     ...tag && { tag },
     ...build && { build },
     ...date && { date },
@@ -208,9 +218,6 @@ export function ClientsProcessor(
 
       if (raw.runtime) {
         const runtimeName = raw.runtime.name || 'Unknown'
-        if (!raw.runtime.name) {
-          console.log(raw.runtime.name, item.clientId)
-        }
         topRuntimes.set(runtimeName, (topRuntimes.get(runtimeName) || 0) + item.count)
       }
 
@@ -239,35 +246,94 @@ export function ClientsProcessor(
     return filters.every(f => matchesFilter(client, f))
   }
 
-  const getTopClients = (filters?: Filter[]): NameCountResponse[] => {
-    const clientCache = SortedMap<string, number>((a, b) => b[1] - a[1])
+  const queryData = (options: Option = {}, filters?: Filter[]): ClientResponse => {
+    
+    const convert = (a: [string, number]) => ({
+      name: a[0],
+      count: a[1]
+    })
+
+    const versionToString = (version: Version): string => {
+      let versionString = '' + version.major
+
+      if (version.minor !== undefined) {
+        versionString += '.' + version.minor
+      }
+
+      if (version.patch !== undefined) {
+        versionString += '.' + version.patch
+      }
+
+      if (version.tag !== undefined) {
+        versionString += '-' + version.tag
+      }
+
+      return versionString
+    }
+
+    const runtimeToString = (runtime: Runtime): string => {
+      let runtimeString = ''
+
+      if (runtime.name) {
+        runtimeString += runtime.name
+      }
+
+      if (options.showRuntimeVersion && runtime.version) {
+        runtimeString += versionToString(runtime.version)
+      }
+
+      return runtimeString
+    }
+
+    const operatingSystemToString = (os: OperatingSytem): string => {
+      let osString = []
+      
+      if (os.vendor) {
+        osString.push(os.vendor)
+      }
+
+      if (options.showOperatingSystemArchitecture && os.architecture) {
+        osString.push(os.architecture)
+      }
+
+      return osString.join('-')
+    }
+
+    const cache = {
+      clients: SortedMap<string, number>((a, b) => b[1] - a[1]),
+      versions: SortedMap<string, number>((a, b) => b[1] - a[1]),
+      runtimes: SortedMap<string, number>((a, b) => b[1] - a[1]),
+      operatingSystems: SortedMap<string, number>((a, b) => b[1] - a[1])
+    }
+
     for (let a in obj) {
       const client = obj[a]
       if (matchesFilters(client, filters)) {
-        clientCache.set(client.name, (clientCache.get(client.name) || 0) + client.count)
+        cache.clients.set(client.name, (cache.clients.get(client.name) || 0) + client.count)
+
+        if (client.version) {
+          const versionString = versionToString(client.version)
+          cache.versions.set(versionString, (cache.versions.get(versionString) || 0) + client.count)
+        }
+        
+        if (client.runtime) {
+          const runtimeString = runtimeToString(client.runtime)
+          cache.runtimes.set(runtimeString, (cache.runtimes.get(runtimeString) || 0) + client.count)
+        }
+        
+        if (client.os) {
+          const osString = operatingSystemToString(client.os)
+          cache.operatingSystems.set(osString, (cache.operatingSystems.get(osString) || 0) + client.count)
+        }
       }
     }
-
-    return clientCache.map(a => ({
-      name: a[0],
-      count: a[1]
-    }))
-  }
-
-  const getTopRuntimes = (filter?: Filter[]): NameCountResponse[] => {
-    const runtimes = []
-    for (let [name, count] of topRuntimes) {
-      runtimes.push({name, count})
+    
+    return {
+      clients: cache.clients.map(convert),
+      versions: cache.versions.map(convert),
+      runtimes: cache.runtimes.map(convert),
+      operatingSystems: cache.operatingSystems.map(convert)
     }
-    return runtimes
-  }
-
-  const getTopOs = (filter?: Filter[]): NameCountResponse[] => {
-    const oses = []
-    for (let [name, count] of topOs) {
-      oses.push({name, count})
-    }
-    return oses
   }
 
   const getRaw = (): Client[] => {
@@ -284,16 +350,17 @@ export function ClientsProcessor(
   return {
     obj,
     getRaw,
-    getTopClients,
-    getTopRuntimes,
-    getTopOperatingSystems: getTopOs
+    queryData
   }
 }
 
 export const EmptyDatabase: ClientDatabase = {
   obj: {},
+  queryData: (options: Option) => ({
+    clients: [],
+    versions: [],
+    operatingSystems: [],
+    runtimes: []
+  }),
   getRaw: () => [],
-  getTopClients: () => [],
-  getTopRuntimes: () => [],
-  getTopOperatingSystems: () => [],
 }
