@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/MariusVanDerWijden/node-crawler-backend/input"
+	"github.com/MariusVanDerWijden/node-crawler-backend/parser"
 )
 
 func createDB(db *sql.DB) error {
@@ -49,20 +50,20 @@ func InsertCrawledNodes(db *sql.DB, crawledNodes []input.CrawledNode) error {
 	}
 
 	for _, node := range crawledNodes {
-		parsed := ParseVersionString(node.ClientType)
+		parsed := parser.ParseVersionString(node.ClientType)
 		fmt.Println(parsed)
 		_, err = stmt.Exec(
 			node.ID,
-			parsed.name,
-			parsed.version.major,
-			parsed.version.minor,
-			parsed.version.patch,
-			parsed.version.tag,
-			parsed.version.build,
-			parsed.version.date,
-			parsed.os.os,
-			parsed.os.architecture,
-			parsed.language,
+			parsed.Name,
+			parsed.Version.Major,
+			parsed.Version.Minor,
+			parsed.Version.Patch,
+			parsed.Version.Tag,
+			parsed.Version.Build,
+			parsed.Version.Date,
+			parsed.Os.Os,
+			parsed.Os.Architecture,
+			parsed.Language,
 		)
 	}
 	return tx.Commit()
