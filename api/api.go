@@ -3,34 +3,46 @@ package api
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/gorilla/mux"
 )
 
-type api struct {
+type Api struct {
 	db *sql.DB
 }
 
-func (a *api) handleRequests() {
-	http.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {})
-	http.HandleFunc("/v1/clients", a.handleClients)
-	http.HandleFunc("/v1/clients/{name}", a.handleClient)
+func New(sdb *sql.DB) *Api {
+	return &Api{db: sdb}
+}
+
+func (a *Api) HandleRequests() {
+	router := mux.NewRouter().StrictSlash(true)
+	router.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) { rw.Write([]byte("Hello")) })
+	router.HandleFunc("/v1/clients", a.handleClients)
+	router.HandleFunc("/v1/clients/{name}", a.handleClient)
+
+	http.ListenAndServe(":10000", router)
 }
 
 type client struct {
-	name  string
-	count int
+	Name  string
+	Count int
 }
 
 // handles the clients endpoint
-func (a *api) handleClients(rw http.ResponseWriter, r *http.Request) {
+func (a *Api) handleClients(rw http.ResponseWriter, r *http.Request) {
 	query := "SELECT name, COUNT(name) FROM nodes GROUP BY name"
-	clients, _ := clientQuery(a.db, query) //TODO handle err
+	clients, err := clientQuery(a.db, query) //TODO handle err
+	fmt.Println(clients)
+	if err != nil {
+		panic(err)
+	}
 	json.NewEncoder(rw).Encode(clients)
 }
 
-func (a *api) handleClient(rw http.ResponseWriter, r *http.Request) {
+func (a *Api) handleClient(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	key := vars["name"]
 	query := "SELECT name, COUNT(name) FROM nodes WHERE name = ? GROUP BY name"
@@ -47,7 +59,7 @@ func clientQuery(db *sql.DB, query string, args ...interface{}) ([]client, error
 	var clients []client
 	for rows.Next() {
 		var cl client
-		err = rows.Scan(&cl.name, &cl.count)
+		err = rows.Scan(&cl.Name, &cl.Count)
 		if err != nil {
 			return nil, err
 		}

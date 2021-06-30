@@ -44,8 +44,12 @@ func ParseVersionString(input string) parsedInfo {
 		fallthrough
 	case 2:
 		output.version = parseVersion(s[1])
+		fallthrough
 	case 1:
-		output.name = s[0]
+		output.name = strings.ToLower(s[0])
+		if output.name == "" {
+			output.name = "unknown"
+		}
 	}
 	return output
 }
