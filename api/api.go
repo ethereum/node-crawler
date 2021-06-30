@@ -25,6 +25,8 @@ func (a *Api) HandleRequests() {
 	router.HandleFunc("/v1/clients/count/{name}", a.handleClient)
 	router.HandleFunc("/v1/clients", a.handleAll)
 	router.HandleFunc("/v1/clients/{name}", a.handleAll)
+	router.HandleFunc("/v1/ready/london", a.handleLondon)
+	router.HandleFunc("/v1/ready/london/{name}", a.handleLondon)
 
 	http.ListenAndServe(":10000", router)
 }
@@ -53,6 +55,7 @@ func (a *Api) handleClient(rw http.ResponseWriter, r *http.Request) {
 	}
 	json.NewEncoder(rw).Encode(clients)
 }
+
 func (a *Api) handleAll(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	key := vars["name"]
@@ -60,6 +63,21 @@ func (a *Api) handleAll(rw http.ResponseWriter, r *http.Request) {
 	if key != "" {
 		query = "SELECT * FROM nodes WHERE name = ?"
 	}
+	nodes, err := nodeQuery(a.db, query, key)
+	if err != nil {
+		fmt.Println(err)
+	}
+	json.NewEncoder(rw).Encode(nodes)
+}
+
+func (a *Api) handleLondon(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	key := vars["name"]
+	query := "SELECT * FROM nodes WHERE true "
+	if key != "" {
+		query = "SELECT * FROM nodes WHERE name = ? "
+	}
+	query = query + "AND" + createLondonQuery()
 	nodes, err := nodeQuery(a.db, query, key)
 	if err != nil {
 		fmt.Println(err)
@@ -104,4 +122,37 @@ func nodeQuery(db *sql.DB, query string, args ...interface{}) ([]node, error) {
 		nodes = append(nodes, p)
 	}
 	return nodes, nil
+}
+
+func createLondonQuery() string {
+	query := "("
+	type cl struct {
+		name  string
+		major int
+		minor int
+		patch int
+	}
+	// Testnets: https://blog.ethereum.org/2021/06/18/london-testnets-announcement/
+	clients := []cl{
+		{"geth", 1, 10, 4},
+		{"nethermind", 1, 10, 73},
+		{"turbogeth", 2021, 6, 4},
+		{"turbo-geth", 2021, 6, 4},
+		{"erigon", 2021, 6, 4},
+		{"besu", 21, 7, 0},
+		{"openethereum", 3, 3, 0},
+		{"ethereum-js", 5, 4, 1},
+	}
+	for i, cl := range clients {
+		major := fmt.Sprintf("major > %v", cl.major)
+		minor := fmt.Sprintf("major == %v AND minor > %v", cl.major, cl.minor)
+		patch := fmt.Sprintf("major == %v AND minor == %v AND patch >= %v", cl.major, cl.minor, cl.patch)
+		inner := fmt.Sprintf("(%v) OR (%v) OR (%v)", major, minor, patch)
+		query += fmt.Sprintf("(name == \"%v\" AND (%v))", cl.name, inner)
+		if i < len(clients)-1 {
+			query += " OR "
+		}
+	}
+	query += ")"
+	return query
 }
