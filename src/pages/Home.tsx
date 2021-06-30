@@ -12,17 +12,7 @@ import { useData } from '../data/DataContext';
 import { Box, Grid, GridItem, Heading, useColorModeValue } from '@chakra-ui/react';
 import { Card } from '../atoms/Card';
 
-
 const colors = scaleOrdinal(schemeCategory10).range();
-
-// const ClientParser = {
-//   'Geth': '1.10.4',
-//   'Nethermind': '1.10.73',
-//   'turbogeth': '2021.06.04-alpha',
-//   'besu': '21.7.0-RC1',
-//   'OpenEthereum': '3.3.0-rc2',
-//   'ethereumjs': '5.4.1'
-// }
 
 function Home() {
   const color = useColorModeValue("gray.800", "white")

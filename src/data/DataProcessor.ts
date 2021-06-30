@@ -1,9 +1,17 @@
 import matchAll from 'string.prototype.matchall'
+import { matchesFilter } from './FilterRunner';
 import { SortedMap } from './SortedMap';
 
 export interface ClientApiResponse {
   clientId: string;
   count: number;
+}
+
+export interface Filter {
+  name?: string
+  version?: Partial<Version>
+  os?: Partial<OperatingSytem>
+  runtime?: Partial<Runtime>
 }
 
 export interface Runtime {
@@ -12,9 +20,9 @@ export interface Runtime {
 }
 
 export interface Version {
-  major: number;
-  minor?: number;
-  patch?: number;
+  major: number | string;
+  minor?: number | string;
+  patch?: number | string;
   tag?: string;
   build?: string;
   date?: string;
@@ -40,9 +48,9 @@ export interface Client extends ClientDetail {
 
 export interface ClientDatabase {
   obj: {[key: number]: Client}
-  getTopClients(): NameCountResponse[]
-  getTopRuntimes(): NameCountResponse[]
-  getTopOperatingSystems(): NameCountResponse[]
+  getTopClients(filters?: Filter[]): NameCountResponse[]
+  getTopRuntimes(filters?: Filter[]): NameCountResponse[]
+  getTopOperatingSystems(filters?: Filter[]): NameCountResponse[]
   getRaw(): Client[]
 }
 
@@ -223,12 +231,21 @@ export function ClientsProcessor(
     return undefined;
   };
 
-  const getTopClients = (): NameCountResponse[] => {
+  const matchesFilters = (client: Client, filters?: Filter[]): boolean => {
+    if (!filters || !filters.length) {
+      return true
+    }
+
+    return filters.every(f => matchesFilter(client, f))
+  }
+
+  const getTopClients = (filters?: Filter[]): NameCountResponse[] => {
     const clientCache = SortedMap<string, number>((a, b) => b[1] - a[1])
-    
     for (let a in obj) {
       const client = obj[a]
-      clientCache.set(client.name, (clientCache.get(client.name) || 0) + client.count)
+      if (matchesFilters(client, filters)) {
+        clientCache.set(client.name, (clientCache.get(client.name) || 0) + client.count)
+      }
     }
 
     return clientCache.map(a => ({
@@ -237,7 +254,7 @@ export function ClientsProcessor(
     }))
   }
 
-  const getTopRuntimes = (): NameCountResponse[] => {
+  const getTopRuntimes = (filter?: Filter[]): NameCountResponse[] => {
     const runtimes = []
     for (let [name, count] of topRuntimes) {
       runtimes.push({name, count})
@@ -245,7 +262,7 @@ export function ClientsProcessor(
     return runtimes
   }
 
-  const getTopOs = (): NameCountResponse[] => {
+  const getTopOs = (filter?: Filter[]): NameCountResponse[] => {
     const oses = []
     for (let [name, count] of topOs) {
       oses.push({name, count})
