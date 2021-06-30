@@ -87,8 +87,8 @@ function Home() {
               endAngle={-180}
               innerRadius={30}
               outerRadius={100}
-              paddingAngle={data.operatingSystems.length == 1 ? 0 : 10}
-              minAngle={data.operatingSystems.length == 1 ? 0 : 20}
+              paddingAngle={data.operatingSystems.length === 1 ? 0 : 10}
+              minAngle={data.operatingSystems.length === 1 ? 0 : 20}
               label={renderLabelContent}
             >
               {
@@ -115,8 +115,8 @@ function Home() {
               endAngle={-180}
               innerRadius={30}
               outerRadius={100}
-              paddingAngle={data.runtimes.length == 1 ? 0 : 20}
-              minAngle={data.runtimes.length == 1 ? 0 : 20}
+              paddingAngle={data.runtimes.length === 1 ? 0 : 20}
+              minAngle={data.runtimes.length === 1 ? 0 : 20}
               label={renderLabelContent}
             >
               {
