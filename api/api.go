@@ -25,8 +25,9 @@ func (a *Api) HandleRequests() {
 	router.HandleFunc("/v1/clients/count/{name}", a.handleClient)
 	router.HandleFunc("/v1/clients", a.handleAll)
 	router.HandleFunc("/v1/clients/{name}", a.handleAll)
-	router.HandleFunc("/v1/ready/london", a.handleLondon)
-	router.HandleFunc("/v1/ready/london/{name}", a.handleLondon)
+	router.HandleFunc("/v1/ready/london/count", a.handleLondonCount)
+	router.HandleFunc("/v1/ready/london/clients", a.handleLondon)
+	router.HandleFunc("/v1/ready/london/clients/{name}", a.handleLondon)
 
 	http.ListenAndServe(":10000", router)
 }
@@ -83,6 +84,38 @@ func (a *Api) handleLondon(rw http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 	json.NewEncoder(rw).Encode(nodes)
+}
+
+func (a *Api) handleLondonCount(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	key := vars["name"]
+	query := "SELECT name, COUNT(name) FROM nodes WHERE true "
+	if key != "" {
+		query = "SELECT name, COUNT(name) FROM nodes WHERE name = ? "
+	}
+	query += "AND" + createLondonQuery()
+	query += "GROUP BY name"
+	// ready
+	clients, err := clientQuery(a.db, query, key) //TODO handle err
+	if err != nil {
+		fmt.Println(err)
+	}
+	// not ready
+	query = "SELECT name, COUNT(name) FROM nodes WHERE true "
+	if key != "" {
+		query = "SELECT name, COUNT(name) FROM nodes WHERE name = ? "
+	}
+	query += "AND NOT" + createLondonQuery()
+	query += "GROUP BY name"
+	clients2, err := clientQuery(a.db, query, key) //TODO handle err
+	if err != nil {
+		fmt.Println(err)
+	}
+	type result struct {
+		Ready    []client
+		NotReady []client
+	}
+	json.NewEncoder(rw).Encode(result{Ready: clients, NotReady: clients2})
 }
 
 func clientQuery(db *sql.DB, query string, args ...interface{}) ([]client, error) {
