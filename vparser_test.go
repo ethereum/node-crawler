@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestParsing(t *testing.T) {
 	tests := []string{
@@ -10,5 +13,10 @@ func TestParsing(t *testing.T) {
 		"erigon/v2021.06.5-alpha-a0694dd3/windows-x86_64/go1.16.5",
 		"OpenEthereum/v3.2.6-stable-f9f4926-20210514/x86_64-linux-gnu/rustc1.52.1",
 	}
-	_ = tests
+
+	for _, test := range tests {
+		info := ParseVersionString(test)
+		fmt.Println(info)
+	}
+	// TODO do something meaningful to test
 }
