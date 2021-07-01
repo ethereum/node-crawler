@@ -179,8 +179,11 @@ func (a *Api) handleLondon(rw http.ResponseWriter, r *http.Request) {
 	if key != "" {
 		query = "SELECT * FROM nodes WHERE name = ? "
 	}
-	query = query + "AND" + createLondonQuery()
-	nodes, err := nodeQuery(a.db, query, key)
+	qu1, args1 := createLondonQuery()
+	query += "AND" + qu1
+	allArgs := []interface{}{key}
+	allArgs = append(allArgs, args1...)
+	nodes, err := nodeQuery(a.db, query, allArgs...)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -194,7 +197,8 @@ func (a *Api) handleLondonCount(rw http.ResponseWriter, r *http.Request) {
 	if key != "" {
 		query = "SELECT name, COUNT(name) FROM nodes WHERE name = ? "
 	}
-	query += "AND" + createLondonQuery()
+	qu1, args1 := createLondonQuery()
+	query += "AND" + qu1
 	query += "GROUP BY name"
 	// ready
 	clients, err := clientQuery(a.db, query, key) //TODO handle err
@@ -206,9 +210,13 @@ func (a *Api) handleLondonCount(rw http.ResponseWriter, r *http.Request) {
 	if key != "" {
 		query = "SELECT name, COUNT(name) FROM nodes WHERE name = ? "
 	}
-	query += "AND NOT" + createLondonQuery()
+	qu2, args2 := createLondonQuery()
+	query += "AND NOT" + qu2
 	query += "GROUP BY name"
-	clients2, err := clientQuery(a.db, query, key) //TODO handle err
+	allArgs := []interface{}{key}
+	allArgs = append(allArgs, args1...)
+	allArgs = append(allArgs, args2...)
+	clients2, err := clientQuery(a.db, query, allArgs...) //TODO handle err
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -285,7 +293,7 @@ func argQuery(db *sql.DB, query string, args []interface{}) ([]map[string]interf
 	return results, nil
 }
 
-func createLondonQuery() string {
+func createLondonQuery() (string, []interface{}) {
 	query := "("
 	type cl struct {
 		name  string
@@ -304,18 +312,29 @@ func createLondonQuery() string {
 		{"openethereum", 3, 3, 0},
 		{"ethereum-js", 5, 4, 1},
 	}
+	var values []interface{}
 	for i, cl := range clients {
-		major := fmt.Sprintf("major > %v", cl.major)
-		minor := fmt.Sprintf("major == %v AND minor > %v", cl.major, cl.minor)
-		patch := fmt.Sprintf("major == %v AND minor == %v AND patch >= %v", cl.major, cl.minor, cl.patch)
+		// TODO: this still has an SQL injection, but without it, the query returns no results
+		name := fmt.Sprintf("name == \"%v\"", cl.name)
+		//name := "name = ?"
+		//values = append(values, cl.name)
+		major := "major > ?"
+		values = append(values, cl.major)
+		minor := "major == ? AND minor > ?"
+		values = append(values, cl.major)
+		values = append(values, cl.minor)
+		patch := "major == ? AND minor == ? AND patch >= ?"
+		values = append(values, cl.major)
+		values = append(values, cl.minor)
+		values = append(values, cl.patch)
 		inner := fmt.Sprintf("(%v) OR (%v) OR (%v)", major, minor, patch)
-		query += fmt.Sprintf("(name == \"%v\" AND (%v))", cl.name, inner)
+		query += fmt.Sprintf("( %v AND (%v))", name, inner)
 		if i < len(clients)-1 {
 			query += " OR "
 		}
 	}
 	query += ")"
-	return query
+	return query, values
 }
 
 func validateKey(key string) bool {
