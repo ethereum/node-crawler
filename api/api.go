@@ -28,6 +28,7 @@ func (a *Api) HandleRequests() {
 	router.HandleFunc("/v1/ready/london/count", a.handleLondonCount)
 	router.HandleFunc("/v1/ready/london/clients", a.handleLondon)
 	router.HandleFunc("/v1/ready/london/clients/{name}", a.handleLondon)
+	router.HandleFunc("/v1/filter/", a.handleFilter).Queries("filter", "{filter}") //, "groupBy", "{groupBy}")
 
 	http.ListenAndServe(":10000", router)
 }
@@ -40,6 +41,44 @@ type client struct {
 type node struct {
 	ID string
 	parser.ParsedInfo
+}
+
+func (a *Api) handleFilter(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	// Where
+	filter := vars["filter"]
+	where, args, err := addFilterArgs(filter)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	// Construct query
+	query := fmt.Sprintf("SELECT * FROM nodes WHERE %v", where)
+	nodes, err := nodeQuery(a.db, query, args...)
+	if err != nil {
+		fmt.Println(err)
+	}
+	json.NewEncoder(rw).Encode(nodes)
+}
+
+func addFilterArgs(filter string) (string, []interface{}, error) {
+	query := "FALSE "
+	var filterArgs []struct {
+		Key   string
+		Value string
+	}
+	err := json.Unmarshal([]byte(filter), &filterArgs)
+	if err != nil {
+		return "", nil, err
+	}
+	var args []interface{}
+	for _, arg := range filterArgs {
+		if validateKey(arg.Key) {
+			query += fmt.Sprintf("OR (%v = ?) ", arg.Key)
+			args = append(args, arg.Value)
+		}
+	}
+	return query, args, nil
 }
 
 // handles the aggregated client endpoint
@@ -188,4 +227,15 @@ func createLondonQuery() string {
 	}
 	query += ")"
 	return query
+}
+
+func validateKey(key string) bool {
+	validKeys := map[string]struct{}{
+		"name":         {},
+		"os":           {},
+		"architecture": {},
+		"language":     {},
+	}
+	_, ok := validKeys[key]
+	return ok
 }
