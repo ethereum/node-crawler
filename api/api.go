@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"reflect"
 
 	"github.com/MariusVanDerWijden/node-crawler-backend/parser"
 	"github.com/gorilla/mux"
@@ -28,7 +29,9 @@ func (a *Api) HandleRequests() {
 	router.HandleFunc("/v1/ready/london/count", a.handleLondonCount)
 	router.HandleFunc("/v1/ready/london/clients", a.handleLondon)
 	router.HandleFunc("/v1/ready/london/clients/{name}", a.handleLondon)
-	router.HandleFunc("/v1/filter/", a.handleFilter).Queries("filter", "{filter}") //, "groupBy", "{groupBy}")
+	router.HandleFunc("/v1/filter/", a.handleFilter).Queries("select", "{select}", "filter", "{filter}", "groupBy", "{groupBy}")
+	router.HandleFunc("/v1/filter/", a.handleFilter).Queries("filter", "{filter}", "groupBy", "{groupBy}")
+	router.HandleFunc("/v1/filter/", a.handleFilter).Queries("filter", "{filter}")
 
 	http.ListenAndServe(":10000", router)
 }
@@ -45,23 +48,63 @@ type node struct {
 
 func (a *Api) handleFilter(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	// Where
-	filter := vars["filter"]
-	where, args, err := addFilterArgs(filter)
+	fields, err := addSelectArgs(vars)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	// Where
+	where, whereArgs, err := addFilterArgs(vars)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	// GroupBy
+	groupBy := vars["groupBy"]
+	var group string
+	if len(groupBy) > 0 {
+		group, err = addGroupByArgs(groupBy)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	}
+
 	// Construct query
-	query := fmt.Sprintf("SELECT * FROM nodes WHERE %v", where)
-	nodes, err := nodeQuery(a.db, query, args...)
+	query := fmt.Sprintf("SELECT %v FROM nodes WHERE %v %v", fields, where, group)
+	fmt.Println(query)
+	nodes, err := argQuery(a.db, query, whereArgs)
 	if err != nil {
 		fmt.Println(err)
 	}
 	json.NewEncoder(rw).Encode(nodes)
 }
 
-func addFilterArgs(filter string) (string, []interface{}, error) {
+func addSelectArgs(vars map[string]string) (string, error) {
+	sel := vars["select"]
+	if len(sel) == 0 {
+		return "*", nil
+	}
+	var selArgs []string
+	err := json.Unmarshal([]byte(sel), &selArgs)
+	if err != nil {
+		return "", err
+	}
+	var sele string
+	for i, arg := range selArgs {
+		if !validateKey(arg) {
+			return "", fmt.Errorf("invalid arg: %v", arg)
+		}
+		sele += arg
+		if i < len(selArgs)-1 {
+			sele += ", "
+		}
+	}
+	return sele, nil
+}
+
+func addFilterArgs(vars map[string]string) (string, []interface{}, error) {
+	filter := vars["filter"]
 	query := "FALSE "
 	var filterArgs []struct {
 		Key   string
@@ -79,6 +122,25 @@ func addFilterArgs(filter string) (string, []interface{}, error) {
 		}
 	}
 	return query, args, nil
+}
+
+func addGroupByArgs(groupBy string) (string, error) {
+	var groupArgs []string
+	err := json.Unmarshal([]byte(groupBy), &groupArgs)
+	if err != nil {
+		return "", err
+	}
+	group := " GROUP BY "
+	for i, arg := range groupArgs {
+		if !validateKey(arg) {
+			return "", fmt.Errorf("invalid arg: %v", arg)
+		}
+		group += arg
+		if i < len(groupArgs)-1 {
+			group += ", "
+		}
+	}
+	return group, nil
 }
 
 // handles the aggregated client endpoint
@@ -196,6 +258,33 @@ func nodeQuery(db *sql.DB, query string, args ...interface{}) ([]node, error) {
 	return nodes, nil
 }
 
+func argQuery(db *sql.DB, query string, args []interface{}) ([]map[string]interface{}, error) {
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	var results []map[string]interface{}
+	for rows.Next() {
+		columns, err := rows.ColumnTypes()
+		if err != nil {
+			return nil, err
+		}
+
+		values := make([]interface{}, len(columns))
+		object := map[string]interface{}{}
+		for i, column := range columns {
+			object[column.Name()] = reflect.New(column.ScanType()).Interface()
+			values[i] = object[column.Name()]
+		}
+		err = rows.Scan(values...)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, object)
+	}
+	return results, nil
+}
+
 func createLondonQuery() string {
 	query := "("
 	type cl struct {
@@ -231,7 +320,14 @@ func createLondonQuery() string {
 
 func validateKey(key string) bool {
 	validKeys := map[string]struct{}{
+		"id":           {},
 		"name":         {},
+		"major":        {},
+		"minor":        {},
+		"patch":        {},
+		"tag":          {},
+		"build":        {},
+		"date":         {},
 		"os":           {},
 		"architecture": {},
 		"language":     {},
