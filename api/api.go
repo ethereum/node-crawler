@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/MariusVanDerWijden/node-crawler-backend/parser"
 	"github.com/gorilla/mux"
@@ -106,22 +107,51 @@ func addSelectArgs(vars map[string]string) (string, error) {
 func addFilterArgs(vars map[string]string) (string, []interface{}, error) {
 	filter := vars["filter"]
 	query := "FALSE "
-	var filterArgs []struct {
-		Key   string
-		Value string
-	}
+	var filterArgs []string
 	err := json.Unmarshal([]byte(filter), &filterArgs)
 	if err != nil {
 		return "", nil, err
 	}
 	var args []interface{}
 	for _, arg := range filterArgs {
-		if validateKey(arg.Key) {
-			query += fmt.Sprintf("OR (%v = ?) ", arg.Key)
-			args = append(args, arg.Value)
+		key, value, comp, err := unmarshalFilterArgs(arg)
+		if err != nil {
+			return "", nil, err
+		}
+		if validateKey(key) {
+			query += fmt.Sprintf("OR (%v %v ?) ", key, comp)
+			args = append(args, value)
 		}
 	}
 	return query, args, nil
+}
+
+// filter args are marshalled as key:value or key:value:comp
+// with comp being a comparator (eq, gt, lt, gte, lte, not)
+func unmarshalFilterArgs(arg string) (string, string, string, error) {
+	split := strings.Split(arg, ":")
+	if len(split) == 3 {
+		comp := "="
+		switch comp {
+		case "eq":
+			comp = "="
+		case "lt":
+			comp = "<"
+		case "lte":
+			comp = "<="
+		case "gt":
+			comp = ">"
+		case "gte":
+			comp = ">="
+		case "not":
+			comp = "!="
+		default:
+		}
+		return split[0], split[1], comp, nil
+	} else if len(split) == 2 {
+		return split[0], split[1], "=", nil
+	}
+	return "", "", "", fmt.Errorf("umarshalling failed, got %v want 2 or 3 args", len(split))
 }
 
 func addGroupByArgs(groupBy string) (string, error) {
