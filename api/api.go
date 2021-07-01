@@ -107,20 +107,29 @@ func addSelectArgs(vars map[string]string) (string, error) {
 func addFilterArgs(vars map[string]string) (string, []interface{}, error) {
 	filter := vars["filter"]
 	query := "FALSE "
-	var filterArgs []string
+	var filterArgs [][]string
 	err := json.Unmarshal([]byte(filter), &filterArgs)
 	if err != nil {
 		return "", nil, err
 	}
 	var args []interface{}
-	for _, arg := range filterArgs {
-		key, value, comp, err := unmarshalFilterArgs(arg)
-		if err != nil {
-			return "", nil, err
+	for _, outer := range filterArgs {
+		inner := ""
+		for idx, arg := range outer {
+			key, value, comp, err := unmarshalFilterArgs(arg)
+			if err != nil {
+				return "", nil, err
+			}
+			if validateKey(key) {
+				inner += fmt.Sprintf("(%v %v ?) ", key, comp)
+				args = append(args, value)
+			}
+			if idx < len(outer)-1 {
+				inner += " AND "
+			}
 		}
-		if validateKey(key) {
-			query += fmt.Sprintf("OR (%v %v ?) ", key, comp)
-			args = append(args, value)
+		if len(inner) > 0 {
+			query += fmt.Sprintf("OR (%v) ", inner)
 		}
 	}
 	return query, args, nil
@@ -132,7 +141,7 @@ func unmarshalFilterArgs(arg string) (string, string, string, error) {
 	split := strings.Split(arg, ":")
 	if len(split) == 3 {
 		comp := "="
-		switch comp {
+		switch split[2] {
 		case "eq":
 			comp = "="
 		case "lt":
