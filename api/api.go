@@ -33,6 +33,7 @@ func (a *Api) HandleRequests() {
 	router.HandleFunc("/v1/filter/", a.handleFilter).Queries("select", "{select}", "filter", "{filter}", "groupBy", "{groupBy}")
 	router.HandleFunc("/v1/filter/", a.handleFilter).Queries("filter", "{filter}", "groupBy", "{groupBy}")
 	router.HandleFunc("/v1/filter/", a.handleFilter).Queries("filter", "{filter}")
+	router.HandleFunc("/v1/top/", a.handleTop)
 
 	http.ListenAndServe(":10000", router)
 }
@@ -227,6 +228,35 @@ func (a *Api) handleLondon(rw http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 	}
 	json.NewEncoder(rw).Encode(nodes)
+}
+
+func (a *Api) handleTop(rw http.ResponseWriter, r *http.Request) {
+	topClientsQuery := "SELECT name as Name, COUNT(name) as Count FROM nodes GROUP BY name ORDER BY count DESC"
+	topLanguageQuery := "SELECT language as Name, COUNT(language) as Count FROM nodes GROUP BY language ORDER BY count DESC"
+	topOsQuery := "SELECT os as Name, COUNT(os) as Count FROM nodes GROUP BY os ORDER BY count DESC"
+
+	clients, err := clientQuery(a.db, topClientsQuery, nil)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	language, err := clientQuery(a.db, topLanguageQuery, nil)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	os, err := clientQuery(a.db, topOsQuery, nil)
+	if err != nil {
+		fmt.Println(err)
+	}
+	
+	type result struct {
+		Clients    []client
+		Languages  []client
+		Os		   []client
+	}
+	
+	json.NewEncoder(rw).Encode(result{Clients: clients, Languages: language, Os: os})
 }
 
 func (a *Api) handleLondonCount(rw http.ResponseWriter, r *http.Request) {
