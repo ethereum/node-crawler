@@ -52,84 +52,75 @@ function Home() {
     <Grid gridGap="8" templateColumns="repeat(2, 1fr)" >
       <Heading>{id}</Heading>
       <GridItem colSpan={2}>
-        <Card>
-          <Heading size="sm">Top Versions</Heading>
-          <Box flex="1" mt="4">
-            <BarChart
-              width={1000}
-              height={(data.versions.length  || 0) * 50}
-              data={data.versions}
-              layout="vertical"
-              margin={{left: 60}}
-            >
-              <XAxis type="number"  stroke={color}/>
-              <YAxis dataKey="name" type="category" stroke={color}/>
-              <Tooltip cursor={false} />
-              <Bar dataKey="count">
-                {data.versions.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={colors[index % 10]} />
-                ))}
-                <LabelList position="right" />
-              </Bar>
-            </BarChart>
-          </Box>
+        <Card title="Top Versions">
+          <BarChart
+            width={1000}
+            height={(data.versions.length  || 0) * 50}
+            data={data.versions}
+            layout="vertical"
+            margin={{left: 60}}
+          >
+            <XAxis type="number"  stroke={color}/>
+            <YAxis dataKey="name" type="category" stroke={color}/>
+            <Tooltip cursor={false} />
+            <Bar dataKey="count">
+              {data.versions.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={colors[index % 10]} />
+              ))}
+              <LabelList position="right" />
+            </Bar>
+          </BarChart>
         </Card>
       </GridItem>
 
-      <Card>
-        <Heading size="sm">Popular Operating Systems</Heading>
-        <Box flex="1">
-          <PieChart width={500} height={300}>
-            <Pie
-              data={data.operatingSystems}
-              dataKey="count"
-              startAngle={180}
-              endAngle={-180}
-              innerRadius={30}
-              outerRadius={100}
-              paddingAngle={data.operatingSystems.length === 1 ? 0 : 10}
-              minAngle={data.operatingSystems.length === 1 ? 0 : 20}
-              label={renderLabelContent}
-            >
-              {
-                data.operatingSystems.map((entry, index) => (
-                  <Cell
-                    key={`slice-${index}`}
-                    fill={colors[index % 10] as string}
-                  />
-                ))
-              }
-            </Pie>
-          </PieChart>
-        </Box>
+      <Card title="Popular Operating Systems">
+        <PieChart width={500} height={300}>
+          <Pie
+            data={data.operatingSystems}
+            dataKey="count"
+            startAngle={180}
+            endAngle={-180}
+            innerRadius={30}
+            outerRadius={100}
+            paddingAngle={data.operatingSystems.length === 1 ? 0 : 10}
+            minAngle={data.operatingSystems.length === 1 ? 0 : 20}
+            label={renderLabelContent}
+          >
+            {
+              data.operatingSystems.map((entry, index) => (
+                <Cell
+                  key={`slice-${index}`}
+                  fill={colors[index % 10] as string}
+                />
+              ))
+            }
+          </Pie>
+        </PieChart>
       </Card>
 
-      <Card>
-        <Heading size="sm">Popular Client Runtimes</Heading>
-        <Box flex="1">
-          <PieChart width={500} height={300}>
-            <Pie
-              data={data.runtimes}
-              dataKey="count"
-              startAngle={180}
-              endAngle={-180}
-              innerRadius={30}
-              outerRadius={100}
-              paddingAngle={data.runtimes.length === 1 ? 0 : 20}
-              minAngle={data.runtimes.length === 1 ? 0 : 20}
-              label={renderLabelContent}
-            >
-              {
-                data.runtimes.map((entry, index) => (
-                  <Cell
-                    key={`slice-${index}`}
-                    fill={colors[index % 10] as string}
-                  />
-                ))
-              }
-            </Pie>
-          </PieChart>
-        </Box>
+      <Card title="Popular Client Runtimes">
+        <PieChart width={500} height={300}>
+          <Pie
+            data={data.runtimes}
+            dataKey="count"
+            startAngle={180}
+            endAngle={-180}
+            innerRadius={30}
+            outerRadius={100}
+            paddingAngle={data.runtimes.length === 1 ? 0 : 20}
+            minAngle={data.runtimes.length === 1 ? 0 : 20}
+            label={renderLabelContent}
+          >
+            {
+              data.runtimes.map((entry, index) => (
+                <Cell
+                  key={`slice-${index}`}
+                  fill={colors[index % 10] as string}
+                />
+              ))
+            }
+          </Pie>
+        </PieChart>
       </Card>
     </Grid>
   );
