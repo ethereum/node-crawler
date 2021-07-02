@@ -251,7 +251,7 @@ func (a *Api) handleTop(rw http.ResponseWriter, r *http.Request) {
 	}
 	
 	type result struct {
-		clients		[]client
+		Clients		[]client
 		Languages	[]client
 		Os			[]client
 	}
