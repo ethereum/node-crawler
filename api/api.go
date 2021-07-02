@@ -251,9 +251,9 @@ func (a *Api) handleTop(rw http.ResponseWriter, r *http.Request) {
 	}
 	
 	type result struct {
-		Clients    []client
-		Languages  []client
-		Os		   []client
+		clients		[]client
+		Languages	[]client
+		Os			[]client
 	}
 	
 	json.NewEncoder(rw).Encode(result{Clients: clients, Languages: language, Os: os})
