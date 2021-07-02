@@ -129,7 +129,7 @@ Gets the list of clients filtered. Ordered by count. You can add more than one f
   </tr>
   <tr>
     <th>Endpoint</th>
-    <td>/api/v1/clients?filter=<strong>TBD"</strong
+    <td>/api/v1/clients?filter=<strong>TBD</strong
 ></td>
   </tr>
   <tr>
@@ -137,8 +137,8 @@ Gets the list of clients filtered. Ordered by count. You can add more than one f
     <td>
       <pre>
 [
-  { name: "Geth", ready: 1000, not_ready: 121 }, 
-  { name: "Nethermind", ready: 100, not_ready: 12 }, 
+  { name: "Geth", count: 1000  }, 
+  { name: "Nethermind", count: 12 }, 
 ]
       </pre></td>
   </tr>
@@ -265,4 +265,26 @@ Get the list of historical entry points given a specific filter. Note filter ver
 
 ## Filter Schema design
 
-TBD
+Filter allows `AND` and `OR` querying with a operator based baked into each field.
+
+For example and `AND`, find me Geth versioned more than 1.2.45. :
+
+```
+[
+  [
+    ["name:geth"],["version:1.2.45:gt"]
+  ]
+]
+```
+
+Another example an `OR`, filter by geth or netherermind:
+
+```
+[
+  [
+    ["name:geth"],["version:1.2.45:gt"]
+  ],
+  [
+    ["name:nethermind"],["version:0.2.45:gt"]
+  ]
+]
