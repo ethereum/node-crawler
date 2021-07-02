@@ -39,8 +39,8 @@ func (a *Api) HandleRequests() {
 }
 
 type client struct {
-	Name  string
-	Count int
+	Name  string `json:"name"`
+	Count int    `json:"count"`
 }
 
 type node struct {
@@ -205,7 +205,7 @@ func (a *Api) handleAll(rw http.ResponseWriter, r *http.Request) {
 	if key != "" {
 		query = "SELECT * FROM nodes WHERE name = ?"
 	}
-	nodes, err := nodeQuery(a.db, query, key)
+	nodes, err := argQuery(a.db, query, []interface{}{key})
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -223,7 +223,7 @@ func (a *Api) handleLondon(rw http.ResponseWriter, r *http.Request) {
 	query += "AND" + qu1
 	allArgs := []interface{}{key}
 	allArgs = append(allArgs, args1...)
-	nodes, err := nodeQuery(a.db, query, allArgs...)
+	nodes, err := argQuery(a.db, query, allArgs)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -270,7 +270,9 @@ func (a *Api) handleLondonCount(rw http.ResponseWriter, r *http.Request) {
 	query += "AND" + qu1
 	query += "GROUP BY name"
 	// ready
-	clients, err := clientQuery(a.db, query, key) //TODO handle err
+	allArgs := []interface{}{key}
+	allArgs = append(allArgs, args1...)
+	clients, err := clientQuery(a.db, query, allArgs...) //TODO handle err
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -282,16 +284,14 @@ func (a *Api) handleLondonCount(rw http.ResponseWriter, r *http.Request) {
 	qu2, args2 := createLondonQuery()
 	query += "AND NOT" + qu2
 	query += "GROUP BY name"
-	allArgs := []interface{}{key}
-	allArgs = append(allArgs, args1...)
 	allArgs = append(allArgs, args2...)
 	clients2, err := clientQuery(a.db, query, allArgs...) //TODO handle err
 	if err != nil {
 		fmt.Println(err)
 	}
 	type result struct {
-		Ready    []client
-		NotReady []client
+		Ready    []client `json:"ready"`
+		NotReady []client `json:"notready"`
 	}
 	json.NewEncoder(rw).Encode(result{Ready: clients, NotReady: clients2})
 }
@@ -311,28 +311,6 @@ func clientQuery(db *sql.DB, query string, args ...interface{}) ([]client, error
 		clients = append(clients, cl)
 	}
 	return clients, nil
-}
-
-func nodeQuery(db *sql.DB, query string, args ...interface{}) ([]node, error) {
-	rows, err := db.Query(query, args...)
-	if err != nil {
-		return nil, err
-	}
-	var nodes []node
-	for rows.Next() {
-		var p node
-		err = rows.Scan(&p.ID, &p.Name,
-			&p.Version.Major, &p.Version.Minor, &p.Version.Patch,
-			&p.Version.Tag, &p.Version.Build, &p.Version.Date,
-			&p.Os.Os, &p.Os.Architecture,
-			&p.Language,
-		)
-		if err != nil {
-			return nil, err
-		}
-		nodes = append(nodes, p)
-	}
-	return nodes, nil
 }
 
 func argQuery(db *sql.DB, query string, args []interface{}) ([]map[string]interface{}, error) {
