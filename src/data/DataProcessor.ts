@@ -55,7 +55,7 @@ export interface ClientResponse {
   clients: NameCountResponse[]
   versions: NameCountResponse[]
   operatingSystems: NameCountResponse[]
-  runtimes: NameCountResponse[]
+  languages: NameCountResponse[]
 }
 
 export interface ClientDatabase {
@@ -201,17 +201,17 @@ export function ClientsProcessor(
 
   const parse = (item: ClientApiResponse): Client | undefined => {
     primaryKey++;
-    if (!item.clientId) {
+    const clientId = item.clientId.toLowerCase()
+    if (clientId) {
       errorCallback('parse', 'empty client id', '');
       return undefined;
     }
 
-    const matches = item.clientId.match(/(?<name>\w+)\/(?<raw>.+)/);
+    const matches = clientId.match(/(?<name>\w+)\/(?<raw>.+)/);
     if (matches?.groups) {
-      const rawString = item.clientId.toLowerCase()
-      const raw = parseRaw(rawString, { primaryKey, errorCallback: (entity, data, pk) => {
-        errorCallback(entity, data, `${pk}: "${rawString}"`)
-      }, raw: rawString });
+      const raw = parseRaw(clientId, { primaryKey, errorCallback: (entity, data, pk) => {
+        errorCallback(entity, data, `${pk}: "${clientId}"`)
+      }, raw: clientId });
       if (!raw) {
         return undefined;
       }
@@ -331,7 +331,7 @@ export function ClientsProcessor(
     return {
       clients: cache.clients.map(convert),
       versions: cache.versions.map(convert),
-      runtimes: cache.runtimes.map(convert),
+      languages: cache.runtimes.map(convert),
       operatingSystems: cache.operatingSystems.map(convert)
     }
   }
@@ -360,7 +360,7 @@ export const EmptyDatabase: ClientDatabase = {
     clients: [],
     versions: [],
     operatingSystems: [],
-    runtimes: []
+    languages: []
   }),
   getRaw: () => [],
 }
