@@ -30,10 +30,12 @@ func (a *Api) HandleRequests() {
 	router.HandleFunc("/v1/ready/london/count", a.handleLondonCount)
 	router.HandleFunc("/v1/ready/london/clients", a.handleLondon)
 	router.HandleFunc("/v1/ready/london/clients/{name}", a.handleLondon)
-	router.HandleFunc("/v1/filter/", a.handleFilter).Queries("select", "{select}", "filter", "{filter}", "groupBy", "{groupBy}")
-	router.HandleFunc("/v1/filter/", a.handleFilter).Queries("filter", "{filter}", "groupBy", "{groupBy}")
-	router.HandleFunc("/v1/filter/", a.handleFilter).Queries("filter", "{filter}")
-	router.HandleFunc("/v1/top/", a.handleTop)
+	router.HandleFunc("/v1/filter", a.handleFilter).Queries("select", "{select}", "filter", "{filter}", "groupBy", "{groupBy}")
+	router.HandleFunc("/v1/filter", a.handleFilter).Queries("filter", "{filter}", "groupBy", "{groupBy}")
+	router.HandleFunc("/v1/filter", a.handleFilter).Queries("filter", "{filter}")
+	router.HandleFunc("/v1/filter", a.handleFilter)
+	router.HandleFunc("/v1/dashboard", a.handleDashboard).Queries("filter", "{filter}")
+	router.HandleFunc("/v1/dashboard", a.handleDashboard)
 
 	http.ListenAndServe(":10000", router)
 }
@@ -106,13 +108,18 @@ func addSelectArgs(vars map[string]string) (string, error) {
 }
 
 func addFilterArgs(vars map[string]string) (string, []interface{}, error) {
-	filter := vars["filter"]
+	filter := strings.TrimSpace(vars["filter"])
+	if  filter == "" {
+		return "", nil, nil
+	}
+
 	query := "FALSE "
 	var filterArgs [][]string
 	err := json.Unmarshal([]byte(filter), &filterArgs)
 	if err != nil {
 		return "", nil, err
 	}
+
 	var args []interface{}
 	for _, outer := range filterArgs {
 		inner := ""
@@ -230,33 +237,58 @@ func (a *Api) handleLondon(rw http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(rw).Encode(nodes)
 }
 
-func (a *Api) handleTop(rw http.ResponseWriter, r *http.Request) {
-	topClientsQuery := "SELECT name as Name, COUNT(name) as Count FROM nodes GROUP BY name ORDER BY count DESC"
-	topLanguageQuery := "SELECT language as Name, COUNT(language) as Count FROM nodes GROUP BY language ORDER BY count DESC"
-	topOsQuery := "SELECT os as Name, COUNT(os) as Count FROM nodes GROUP BY os ORDER BY count DESC"
+func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
 
-	clients, err := clientQuery(a.db, topClientsQuery, nil)
+	// Where
+	where, whereArgs, err := addFilterArgs(vars)
 	if err != nil {
 		fmt.Println(err)
-	}
-
-	language, err := clientQuery(a.db, topLanguageQuery, nil)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	os, err := clientQuery(a.db, topOsQuery, nil)
-	if err != nil {
-		fmt.Println(err)
+		return
 	}
 	
+	if whereArgs != nil {
+		where = "WHERE " + where
+	}
+
+	topClientsQuery := fmt.Sprintf("SELECT name as Name, COUNT(name) as Count FROM nodes %v GROUP BY name ORDER BY count DESC", where)
+	topLanguageQuery := fmt.Sprintf("SELECT language as Name, COUNT(language) as Count FROM nodes %v GROUP BY language ORDER BY count DESC", where)
+	topOsQuery := fmt.Sprintf("SELECT os as Name, COUNT(os) as Count FROM nodes %v GROUP BY os ORDER BY count DESC", where)
+	topVersionQuery := fmt.Sprintf("SELECT major || '.' || minor || '.' || patch as Name, count(Name) as Count FROM nodes %v GROUP BY Name ORDER BY Count DESC", where)
+
+	clients, err := clientQuery(a.db, topClientsQuery, whereArgs...)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	language, err := clientQuery(a.db, topLanguageQuery, whereArgs...)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	operatingSystems, err := clientQuery(a.db, topOsQuery, whereArgs...)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	// When the filter has a name, we don't want to include that in the json response.
+	var versions []client
+	if strings.Contains(vars["filter"], "[\"name:") {
+		dataVersions, err := clientQuery(a.db, topVersionQuery, whereArgs...)
+		versions = dataVersions
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+
 	type result struct {
-		Clients		[]client
-		Languages	[]client
-		Os			[]client
+		Clients			[]client `json:"clients"`
+		Languages		[]client `json:"languages"`
+		OperatingSystems[]client `json:"operatingSystems"`
+		Versions		[]client `json:"versions"`
 	}
-	
-	json.NewEncoder(rw).Encode(result{Clients: clients, Languages: language, Os: os})
+
+	json.NewEncoder(rw).Encode(result{Clients: clients, Languages: language, OperatingSystems: operatingSystems, Versions: versions})
 }
 
 func (a *Api) handleLondonCount(rw http.ResponseWriter, r *http.Request) {
