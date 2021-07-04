@@ -12,6 +12,7 @@ import { Card } from '../atoms/Card';
 import { useParams } from 'react-router-dom';
 import { Loader } from '../organisms/Loader';
 import { SortedMap } from '../data/SortedMap';
+import { appendOtherGroup } from '../data/DataMassager';
 
 const colors = scaleOrdinal(schemeCategory10).range();
 
@@ -41,6 +42,9 @@ function Home() {
       const response = await fetch(url.toString())
       const json: ClientData = await response.json();
 
+      json.versions = appendOtherGroup(json.versions)
+      json.languages = appendOtherGroup(json.languages)
+      json.operatingSystems = appendOtherGroup(json.operatingSystems)
 
       setData(json)
     }

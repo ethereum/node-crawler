@@ -11,6 +11,7 @@ import { Box, Grid, GridItem, Heading, useColorModeValue } from '@chakra-ui/reac
 import { Card } from '../atoms/Card';
 import { useHistory } from 'react-router-dom';
 import { Loader } from '../organisms/Loader';
+import { appendOtherGroup } from '../data/DataMassager';
 
 const colors = scaleOrdinal(schemeCategory10).range();
 
@@ -34,6 +35,10 @@ function Home() {
     const run = async () => {
       const response = await fetch(`/v1/dashboard`)
       const json: TopResponse = await response.json()
+
+      json.clients = appendOtherGroup(json.clients)
+      json.languages = appendOtherGroup(json.languages)
+      json.operatingSystems = appendOtherGroup(json.operatingSystems)
 
       setData(json)
     }
