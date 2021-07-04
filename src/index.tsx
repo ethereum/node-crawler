@@ -10,9 +10,7 @@ ReactDOM.render(
     <ColorModeScript />
     <ChakraProvider theme={theme}>
       <CSSReset />
-      <DataProvider url={'/rest/clients'}>
-        <Routing />
-      </DataProvider>
+      <Routing />
     </ChakraProvider>
   </React.StrictMode>,
   document.getElementById('root')

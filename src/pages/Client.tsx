@@ -7,32 +7,47 @@ import {
 import { scaleOrdinal } from 'd3-scale';
 import { schemeCategory10} from 'd3-scale-chromatic';
 
-import { ClientResponse } from '../data/DataProcessor';
-import { useData } from '../data/DataContext';
 import { Box, Grid, GridItem, Heading, useColorModeValue } from '@chakra-ui/react';
 import { Card } from '../atoms/Card';
 import { useParams } from 'react-router-dom';
 import { Loader } from '../organisms/Loader';
+import { SortedMap } from '../data/SortedMap';
 
 const colors = scaleOrdinal(schemeCategory10).range();
+
+interface NamedCount {
+  name: string;
+  count: number;
+}
+
+interface ClientData {
+  versions: NamedCount[];
+  operatingSystems: NamedCount[];
+  languages: NamedCount[];
+}
 
 function Home() {
   const { id } = useParams<{ id: string }>();
   const color = useColorModeValue("gray.800", "white")
-  const db = useData()
-  const [data, setData] = useState<ClientResponse>()
+  const [data, setData] = useState<ClientData | undefined>()
 
   useEffect(() => {
-    const parsedData = db.queryData({showOperatingSystemArchitecture: false, showRuntimeVersion: false}, [{name: id}])
-    const topClient = parsedData.versions.slice(0, 10)
-    const othersSum = parsedData.versions.slice(10).reduce((prev, curr) => {
-      return prev + curr.count
-    }, 0)
-    
-    topClient.push({name: 'others', count: othersSum})
-    parsedData.versions = topClient
-    setData(parsedData)
-  }, [id, db])
+    const run = async () => {
+      const url = new URL(window.location.protocol + window.location.host + '/v1/dashboard')
+      const params = {
+        "filter":  `[["name:${id}"]]`
+      }
+      url.search = new URLSearchParams(params).toString();
+      const response = await fetch(url.toString())
+      const json: ClientData = await response.json();
+
+
+      setData(json)
+    }
+
+    run()
+
+  }, [id])
 
   if (!data) {
     return <Loader>Processing {id} data</Loader>
@@ -101,18 +116,18 @@ function Home() {
       <Card title="Popular Client Runtimes">
         <PieChart width={500} height={300}>
           <Pie
-            data={data.runtimes}
+            data={data.languages}
             dataKey="count"
             startAngle={180}
             endAngle={-180}
             innerRadius={30}
             outerRadius={100}
-            paddingAngle={data.runtimes.length === 1 ? 0 : 20}
-            minAngle={data.runtimes.length === 1 ? 0 : 20}
+            paddingAngle={data.languages.length === 1 ? 0 : 20}
+            minAngle={data.languages.length === 1 ? 0 : 20}
             label={renderLabelContent}
           >
             {
-              data.runtimes.map((entry, index) => (
+              data.languages.map((entry, index) => (
                 <Cell
                   key={`slice-${index}`}
                   fill={colors[index % 10] as string}
