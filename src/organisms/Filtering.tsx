@@ -1,4 +1,4 @@
-import { BoxProps, Button, Drawer, DrawerBody, DrawerCloseButton, DrawerContent, DrawerFooter, DrawerHeader, DrawerOverlay, forwardRef, HStack, Icon, Text, useColorModeValue, useDisclosure, VStack } from "@chakra-ui/react"
+import { Box, BoxProps, Button, Drawer, DrawerBody, DrawerCloseButton, DrawerContent, DrawerFooter, DrawerHeader, DrawerOverlay, forwardRef, HStack, Icon, Text, useColorModeValue, useDisclosure, VStack } from "@chakra-ui/react"
 import React, { useRef } from "react";
 import { useEffect } from "react";
 import { VscClose, VscFilter } from "react-icons/vsc"
@@ -32,11 +32,11 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
   const btnRef: React.RefObject<any> = useRef()
 
   const [modifyState, setModifyState] = React.useState(false)
-  const [filters,] = React.useState(props.filters)
+  const [filters, setFilters] = React.useState(props.filters || [])
   const [totalFilters, setTotalFilters] = React.useState(0)
 
   useEffect(() => {
-    setTotalFilters(filters?.reduce((prev, curr) => prev + curr.length, 0) || 0)
+    setTotalFilters(filters.reduce((prev, curr) => prev + curr.length, 0) || 0)
   }, [filters])
 
   const addNewGroupItem = () => {
@@ -45,6 +45,25 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
 
   const onApply = () => {
     setModifyState(false)
+  }
+
+  const removeFilter = (groupIndex: number, filterIndex?: number) => {
+    if (filterIndex === undefined) {
+      setFilters(groupFilters => {
+        const newGroupFilters = [...groupFilters]
+        newGroupFilters.splice(groupIndex, 1)
+        return newGroupFilters
+      })
+      return
+    }
+
+    setFilters(groupFilters => {
+      const newGroupFilters = [...groupFilters]
+      const group = [...groupFilters[groupIndex]]
+      group.splice(filterIndex, 1)
+      newGroupFilters[groupIndex] = group
+      return newGroupFilters
+    })
   }
 
   const filterText = totalFilters > 0 ? `${totalFilters} filters applied` : "Apply filter"
@@ -70,27 +89,27 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
             )}
             {!modifyState && (
               <>
-                {filters && filters.map((filterGroup: FilterGroup, groupIndex: number) => (
-                  <>
+                {filters.length > 0 && filters.map((filterGroup: FilterGroup, groupIndex: number) => (
+                  <Box key={groupIndex}>
                     <VStack borderWidth="medium" borderStyle="dashed" borderColor={color} rounded="lg" p="4">
                       {filterGroup.map((filter: Filter, filterIndex: number) => (
-                        <>
+                        <Box key={filterIndex}>
                           <HStack borderWidth="thin" borderStyle="dashed" borderColor={color} rounded="lg" p="2">
                             <Text fontWeight="bold">{filter.name}</Text>
                             {filter.operator && (<Text>{FilterOperatorToSymbol[filter.operator]}</Text>)}
                             <Text>{filter.value}</Text>
-                            {filterGroup.length > 1 && (<Icon as={VscClose} _hover={{color: "black"}} cursor="pointer" />)}
+                            {filterGroup.length > 1 && (<Icon as={VscClose} _hover={{color: "black"}} cursor="pointer" onClick={() => removeFilter(groupIndex, filterIndex)}/>)}
                           </HStack>
                           {filterIndex < filterGroup.length - 1 && <Text fontSize="14px">and</Text>}
-                        </>
+                        </Box>
                       ))}
                       <HStack>
-                        <Button colorScheme="teal" size="xs" variant="ghost">Remove</Button>
+                        <Button colorScheme="teal" size="xs" variant="ghost" onClick={() => removeFilter(groupIndex)}>Remove</Button>
                         <Button colorScheme="teal" size="xs" variant="ghost">Add</Button>
                       </HStack>
                     </VStack>
                     {groupIndex < filters.length - 1 && <Text fontSize="14px"m="4">or</Text>}
-                  </>
+                  </Box>
                 ))}
                 <Button mt="4" colorScheme="teal" size="xs" variant="ghost" onClick={() => addNewGroupItem()}>Add another OR condition</Button>
               </>
