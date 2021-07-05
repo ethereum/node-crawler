@@ -7,11 +7,10 @@ import {
 import { scaleOrdinal } from 'd3-scale';
 import { schemeCategory10} from 'd3-scale-chromatic';
 
-import { Box, Grid, GridItem, Heading, useColorModeValue } from '@chakra-ui/react';
+import { Grid, GridItem, Heading, useColorModeValue } from '@chakra-ui/react';
 import { Card } from '../atoms/Card';
 import { useParams } from 'react-router-dom';
 import { Loader } from '../organisms/Loader';
-import { SortedMap } from '../data/SortedMap';
 import { appendOtherGroup } from '../data/DataMassager';
 
 const colors = scaleOrdinal(schemeCategory10).range();
