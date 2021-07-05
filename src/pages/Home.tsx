@@ -9,10 +9,10 @@ import { schemeCategory10 } from 'd3-scale-chromatic';
 
 import { Grid, GridItem, useColorModeValue } from '@chakra-ui/react';
 import { Card } from '../atoms/Card';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import { Loader } from '../organisms/Loader';
 import { appendOtherGroup } from '../data/DataMassager';
-import { FilterGroup, Filtering } from '../organisms/Filtering';
+import { Filtering } from '../organisms/Filtering';
 
 const colors = scaleOrdinal(schemeCategory10).range();
 
@@ -28,6 +28,7 @@ interface TopResponse {
 }
 
 function Home() {
+  const location = useLocation();
   const history = useHistory()
   const color = useColorModeValue("gray.800", "white")
   const [data, setData] = useState<TopResponse>()
@@ -65,15 +66,10 @@ function Home() {
     history.push(`/${e.activePayload[0].payload.name}`)
   }
 
-  const filtersDemo: FilterGroup[] = [
-    [{name: 'name', 'value': 'geth'}, {name: 'version', 'value': '1.10.3', operator: 'gte'}],
-    [{name: 'name', 'value': 'nethermind'}]
-  ]
-
   return (
     <Grid gridGap="8" templateColumns="repeat(2, 1fr)" >
       <GridItem colSpan={2}>
-        <Filtering filters={filtersDemo}/>
+        <Filtering search={location.search}/>
       </GridItem>
       <GridItem colSpan={2}>
         <Card title="Popular Clients">

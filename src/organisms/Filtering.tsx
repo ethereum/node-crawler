@@ -4,7 +4,8 @@ import { useEffect } from "react";
 import { VscClose, VscFilter } from "react-icons/vsc"
 
 interface FilteringProps extends BoxProps  {
-  filters?: FilterGroup[];
+  search?: string
+  onInvalidFilter?: (search: string) => void
 }
 
 export type FilterOperator = "eq" | "not" | "lt" | "lte" | "gt" | "gte"
@@ -32,8 +33,52 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
   const btnRef: React.RefObject<any> = useRef()
 
   const [modifyState, setModifyState] = React.useState(false)
-  const [filters, setFilters] = React.useState(props.filters || [])
+  const [filters, setFilters] = React.useState<FilterGroup[]>([])
   const [totalFilters, setTotalFilters] = React.useState(0)
+
+  const { search, onInvalidFilter } = props
+  
+  useEffect(() => {
+    const rawFilters = new URLSearchParams(search).get('filters')
+    if (!rawFilters) {
+      return
+    }
+
+    try {
+      const parsedFilters: [string[]] = JSON.parse(rawFilters)
+      if (!Array.isArray(parsedFilters)) {
+        throw Error(`Invalid filters: ${rawFilters}`)
+      }
+
+      const filterGroup: FilterGroup[] = parsedFilters.map((unparsedFilters, idx) => {
+        if (!Array.isArray(unparsedFilters)) {
+          throw Error(`Invalid filter, item "${idx}" should be an array`)
+        }
+
+        return unparsedFilters.map((unparsedFilter, unparsedIdx) => {
+          if (typeof unparsedFilter !== "string") {
+            throw Error(`Invalid filter, item "${idx}" at "${unparsedIdx}" should be an array`)
+          }
+
+          const [name, value, operator] = unparsedFilter.split(":")
+          if (operator && !(operator in FilterOperatorToSymbol)) {
+            throw Error(`Invalid operator, item "${idx}" at "${unparsedIdx}" is invalid: ${operator}`)
+          }
+
+          if (!name && !value) {
+            throw Error(`Invalid key/value, item "${idx}" at "${unparsedIdx}" is missing: ${name} and ${value}`)
+          }
+
+          return { name, value, operator } as Filter
+        })
+      })
+      
+      setFilters(filterGroup)
+    } catch (e) {
+      onInvalidFilter && onInvalidFilter(`Cannot parse filters: '${rawFilters}'. Reason: ${e}`)
+      return
+    }
+  }, [search, onInvalidFilter])
 
   useEffect(() => {
     setTotalFilters(filters.reduce((prev, curr) => prev + curr.length, 0) || 0)
