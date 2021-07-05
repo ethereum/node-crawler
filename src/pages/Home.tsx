@@ -12,7 +12,7 @@ import { Card } from '../atoms/Card';
 import { useHistory, useLocation } from 'react-router-dom';
 import { Loader } from '../organisms/Loader';
 import { appendOtherGroup } from '../data/DataMassager';
-import { Filtering } from '../organisms/Filtering';
+import { FilterGroup, Filtering, ParseAndValidateFilters } from '../organisms/Filtering';
 
 const colors = scaleOrdinal(schemeCategory10).range();
 
@@ -32,10 +32,19 @@ function Home() {
   const history = useHistory()
   const color = useColorModeValue("gray.800", "white")
   const [data, setData] = useState<TopResponse>()
+  const [filters, setFilters] = useState<FilterGroup[]>([])
 
   useEffect(() => {
     const run = async () => {
-      const response = await fetch(`/v1/dashboard`)
+      let search = ''
+      try {
+        setFilters(ParseAndValidateFilters(location.search));
+        search = location.search
+      } catch (e) {
+        console.error(e);
+      }
+
+      const response = await fetch(`/v1/dashboard${search}`)
       const json: TopResponse = await response.json()
 
       json.clients = appendOtherGroup(json.clients)
@@ -69,7 +78,7 @@ function Home() {
   return (
     <Grid gridGap="8" templateColumns="repeat(2, 1fr)" >
       <GridItem colSpan={2}>
-        <Filtering search={location.search}/>
+        <Filtering filters={filters}/>
       </GridItem>
       <GridItem colSpan={2}>
         <Card title="Popular Clients">

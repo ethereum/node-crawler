@@ -89,7 +89,7 @@ const osMapping: { [key: string]: string } = {
 };
 
 function tryParseNumber(input: string): number | undefined  {
-  return parseInt(input)
+  return parseInt(input) || undefined;
 }
 
 function parseVersion(version: string, parseOpt: ParseParam): Version | undefined {
@@ -104,7 +104,7 @@ function parseVersion(version: string, parseOpt: ParseParam): Version | undefine
   const patch = tryParseNumber(matches.groups.patch)
   const tag = matches.groups.tag
   const build = matches.groups.build
-  const date = matches.groups.EmptyDatabase
+  const date = matches.groups.date
 
   return {
     major: parseInt(matches.groups.major),
@@ -192,7 +192,7 @@ export function ClientsProcessor(
   data: ClientApiResponse[],
   errorCallback: (entity: string, data: string, clientId: string) => void
 ): ClientDatabase {
-
+  
   const obj: {[key: number]: Client} = {}
   const topRuntimes = new Map<string, number>()
   const topOs = new Map<string, number>()
@@ -202,7 +202,7 @@ export function ClientsProcessor(
   const parse = (item: ClientApiResponse): Client | undefined => {
     primaryKey++;
     const clientId = item.clientId.toLowerCase()
-    if (clientId) {
+    if (!clientId) {
       errorCallback('parse', 'empty client id', '');
       return undefined;
     }

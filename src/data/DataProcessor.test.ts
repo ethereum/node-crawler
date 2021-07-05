@@ -1,4 +1,4 @@
-import { ClientApiResponse, ClientsProcessor, Filter } from "./DataProcessor";
+import { ClientApiResponse, ClientsProcessor } from "./DataProcessor";
 
 const mockPeers: ClientApiResponse[] = [
   { clientId: "Geth/v1.10.3-stable-991384a7/linux-amd64/go1.16.3", count: 5 },
@@ -32,7 +32,7 @@ test("processes full schema correctly", () => {
   expect(raw[0]).toEqual({
     count: 5,
     primaryKey: 1,
-    name: 'Geth',
+    name: 'geth',
     version: { 
       major: 1,
       minor: 10,
@@ -57,7 +57,7 @@ test("processes full schema correctly", () => {
   expect(raw[1]).toEqual({
     count: 4,
     primaryKey: 2,
-    name: 'Geth',
+    name: 'geth',
     version: { 
       major: 1,
       minor: 10,
@@ -81,7 +81,7 @@ test("processes full schema correctly", () => {
   expect(raw[2]).toEqual({
     count: 3,
     primaryKey: 3,
-    name: 'Geth',
+    name: 'geth',
     label: 'goerli',
     version: { 
       major: 1,
@@ -139,8 +139,8 @@ test("processes os correctly", () => {
 test("top clients", () => {
   const processor = mockProcessor()
   expect(processor.queryData().clients).toEqual([
-    { name: 'Geth', count: 15 },
-    { name: 'OpenEthereum', count: 5 },
+    { name: 'geth', count: 15 },
+    { name: 'openethereum', count: 5 },
     { name: 'besu', count: 2 },
     { name: 'erigon', count: 1 }
   ])
@@ -150,8 +150,8 @@ test("top runtimes", () => {
   const processor = mockProcessor()
   expect(processor.queryData().languages).toEqual([
     { name: 'go', count: 16 },
-    { name: 'java', count: 2 },
-    { name: 'rustc', count: 5 }
+    { name: 'rustc', count: 5 },
+    { name: 'java', count: 2 }
   ])
 })
 
@@ -167,36 +167,36 @@ test("top operating systmes", () => {
 test("filtering with exact conditions", () => {
   const processor = mockProcessor()
   expect(processor.queryData({}, [{ os: {vendor: 'linux'}}]).clients).toEqual([
-    { name: 'Geth', count: 13 },
-    { name: 'OpenEthereum', count: 5 }
+    { name: 'geth', count: 13 },
+    { name: 'openethereum', count: 5 }
   ])
 
   expect(processor.queryData({}, [{ name: 'Geth'}]).clients).toEqual([
-    { name: 'Geth', count: 15 }
+    { name: 'geth', count: 15 }
   ])
 
-  expect(processor.queryData({}, [{ name: 'Geth', version: {major: 1, minor: 10, patch: 4}}]).clients).toEqual([
-    { name: 'Geth', count: 7 }
+  expect(processor.queryData({}, [{ name: 'geth', version: {major: 1, minor: 10, patch: 4}}]).clients).toEqual([
+    { name: 'geth', count: 7 }
   ])
 })
 
 test("filtering with conditionals", () => {
   const processor = mockProcessor()
   expect(processor.queryData({}, [{ name: 'Geth', version: {major: 1, minor: 'gte 10'}}]).clients).toEqual([
-    { name: 'Geth', count: 12 }
+    { name: 'geth', count: 12 }
   ])
 
-  expect(processor.queryData({}, [{ name: 'Geth', version: {major: 1, minor: 'gte 8'}}]).clients).toEqual([
-    { name: 'Geth', count: 15 }
+  expect(processor.queryData({}, [{ name: 'geth', version: {major: 1, minor: 'gte 8'}}]).clients).toEqual([
+    { name: 'geth', count: 15 }
   ])
 })
 
 test("complex filtering with multiple filters and conditions", () => {
   const processor = mockProcessor()
   expect(processor.queryData({}, [
-      { name: 'Geth', version: {major: 1, minor: 'gte 9'}},
-      { name: 'Geth', version: {major: 1, minor: 'lt 10'}}
+      { name: 'geth', version: {major: 1, minor: 'gte 9'}},
+      { name: 'geth', version: {major: 1, minor: 'lt 10'}}
   ]).clients).toEqual([
-    { name: 'Geth', count: 2 }
+    { name: 'geth', count: 2 }
   ])
 })

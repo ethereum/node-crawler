@@ -207,7 +207,7 @@ function ClientsProcessor(data, errorCallback) {
             return true;
         }
 
-        return filters.every(f => matchesFilter(client, f));
+        return filters.some(f => matchesFilter(client, f));
     };
 
     const queryData = (options = {}, filters) => {
@@ -371,14 +371,18 @@ module.exports = async (app) => {
 	})
 
 	const filters = []
-	if (req.query.filter) {
+    let foundAtMostOneName = 0
+	if (req.query.filters) {
 
-		const parsedFilter = JSON.parse(req.query.filter.toLowerCase())
+		const parsedFilter = JSON.parse(req.query.filters.toLowerCase())
 		if (parsedFilter.length) {
 			parsedFilter.forEach((filter) => {
 				const filterObj = {}
 				filter.forEach(filterItem => {
 					const [key, value, operator] = filterItem.split(':')
+                    if (key === 'name') {
+                        foundAtMostOneName += 1
+                    }
 					filterObj[key] = value
 				})
 				filters.push(filterObj)
@@ -386,7 +390,7 @@ module.exports = async (app) => {
 		}
 	}
 	return resp.json(proc.queryData({
-		showRuntimeVersion: req.query.filter ? true : false
+		showRuntimeVersion: foundAtMostOneName === 1 ? true : false
 	}, filters))
   })
 };
