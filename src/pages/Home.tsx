@@ -55,7 +55,7 @@ function Home() {
     }
 
     run()
-  }, [])
+  }, [location.search])
 
   if (!data) {
     return <Loader>Processing data</Loader>
