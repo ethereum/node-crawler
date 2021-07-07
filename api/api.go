@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/MariusVanDerWijden/node-crawler-backend/parser"
 	"github.com/gorilla/mux"
@@ -20,7 +21,8 @@ func New(sdb *sql.DB) *Api {
 	return &Api{db: sdb}
 }
 
-func (a *Api) HandleRequests() {
+func (a *Api) HandleRequests(wg *sync.WaitGroup) {
+	defer wg.Done()
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) { rw.Write([]byte("Hello")) })
 	router.HandleFunc("/v1/clients/count", a.handleClient)
@@ -109,7 +111,7 @@ func addSelectArgs(vars map[string]string) (string, error) {
 
 func addFilterArgs(vars map[string]string) (string, []interface{}, error) {
 	filter := strings.TrimSpace(vars["filter"])
-	if  filter == "" {
+	if filter == "" {
 		return "", nil, nil
 	}
 
@@ -246,7 +248,7 @@ func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 		return
 	}
-	
+
 	if whereArgs != nil {
 		where = "WHERE " + where
 	}
@@ -282,10 +284,10 @@ func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	type result struct {
-		Clients			[]client `json:"clients"`
-		Languages		[]client `json:"languages"`
-		OperatingSystems[]client `json:"operatingSystems"`
-		Versions		[]client `json:"versions"`
+		Clients          []client `json:"clients"`
+		Languages        []client `json:"languages"`
+		OperatingSystems []client `json:"operatingSystems"`
+		Versions         []client `json:"versions"`
 	}
 
 	json.NewEncoder(rw).Encode(result{Clients: clients, Languages: language, OperatingSystems: operatingSystems, Versions: versions})

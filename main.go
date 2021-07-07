@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -36,17 +37,20 @@ func main() {
 			panic(err)
 		}
 	}
+	var wg sync.WaitGroup
+	wg.Add(2)
 	// Start reading deamon
-	go deamon(crawlerDB, nodeDB)
+	go deamon(&wg, crawlerDB, nodeDB)
 	// Start the API deamon
 	apiDeamon := api.New(nodeDB)
-	go apiDeamon.HandleRequests()
-	time.Sleep(10 * time.Minute)
+	go apiDeamon.HandleRequests(&wg)
+	wg.Wait()
 }
 
 // Deamon reads new nodes from the crawler and puts them in the db
 // Might trigger the invalidation of caches for the api in the future
-func deamon(crawlerDB, nodeDB *sql.DB) {
+func deamon(wg *sync.WaitGroup, crawlerDB, nodeDB *sql.DB) {
+	defer wg.Done()
 	lastCheck := time.Time{}
 	for {
 		nodes, err := input.ReadRecentNodes(crawlerDB, lastCheck)
