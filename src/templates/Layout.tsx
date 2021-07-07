@@ -9,7 +9,7 @@ export function Layout(props: LayoutProps) {
   return (
     <VStack minH="100vh" align="flex-start" justify="flex-start">
       <Header />
-      <VStack spacing={8} p={8} >
+      <VStack spacing={8} p={8} width="100%">
         {props.children}
       </VStack>
     </VStack>
