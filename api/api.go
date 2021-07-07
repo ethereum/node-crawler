@@ -254,7 +254,7 @@ func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 	topClientsQuery := fmt.Sprintf("SELECT name as Name, COUNT(name) as Count FROM nodes %v GROUP BY name ORDER BY count DESC", where)
 	topLanguageQuery := fmt.Sprintf("SELECT language as Name, COUNT(language) as Count FROM nodes %v GROUP BY language ORDER BY count DESC", where)
 	topOsQuery := fmt.Sprintf("SELECT os as Name, COUNT(os) as Count FROM nodes %v GROUP BY os ORDER BY count DESC", where)
-	topVersionQuery := fmt.Sprintf("SELECT major || '.' || minor || '.' || patch as Name, count(Name) as Count FROM nodes %v GROUP BY Name ORDER BY Count DESC", where)
+	topVersionQuery := fmt.Sprintf("SELECT Name, Count(*) as Count FROM (SELECT major || '.' || minor || '.' || patch as Name FROM nodes %v) GROUP BY Name ORDER BY Count DESC ", where)
 
 	clients, err := clientQuery(a.db, topClientsQuery, whereArgs...)
 	if err != nil {
