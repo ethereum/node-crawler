@@ -363,46 +363,46 @@ async function fetchClients() {
   return cacheCall()
 }
 
-module.exports = async (app) => {
-  app.get('/v1/dashboard', async (req, resp) => { 
-	const response = await fetchClients()
-	const proc = ClientsProcessor(response, (err) => {
-		console.error(err)
-	})
+// module.exports = async (app) => {
+//   app.get('/v1/dashboard', async (req, resp) => { 
+// 	const response = await fetchClients()
+// 	const proc = ClientsProcessor(response, (err) => {
+// 		console.error(err)
+// 	})
 
-	const filters = []
-    let foundAtMostOneName = 0
-	if (req.query.filters) {
+// 	const filters = []
+//     let foundAtMostOneName = 0
+// 	if (req.query.filters) {
 
-		const parsedFilter = JSON.parse(req.query.filters.toLowerCase())
-		if (parsedFilter.length) {
-			parsedFilter.forEach((filter) => {
-				const filterObj = {}
-				filter.forEach(filterItem => {
-					const [key, value, operator] = filterItem.split(':')
-                    if (key === 'name') {
-                        foundAtMostOneName += 1
-                    }
-					filterObj[key] = value
-				})
-				filters.push(filterObj)
-			})
-		}
-	}
-	return resp.json(proc.queryData({
-		showRuntimeVersion: foundAtMostOneName === 1 ? true : false
-	}, filters))
-  })
-};
-
-// const createProxyMiddleware = require('http-proxy-middleware');
-
-// module.exports = function(app) {
-//   app.use(
-//     '/v1',
-//     createProxyMiddleware({
-//       target: process.env.CRAWLER_API_URL,
-//       changeOrigin: true,
-//     })
-//   );
+// 		const parsedFilter = JSON.parse(req.query.filters.toLowerCase())
+// 		if (parsedFilter.length) {
+// 			parsedFilter.forEach((filter) => {
+// 				const filterObj = {}
+// 				filter.forEach(filterItem => {
+// 					const [key, value, operator] = filterItem.split(':')
+//                     if (key === 'name') {
+//                         foundAtMostOneName += 1
+//                     }
+// 					filterObj[key] = value
+// 				})
+// 				filters.push(filterObj)
+// 			})
+// 		}
+// 	}
+// 	return resp.json(proc.queryData({
+// 		showRuntimeVersion: foundAtMostOneName === 1 ? true : false
+// 	}, filters))
+//   })
 // };
+
+const createProxyMiddleware = require('http-proxy-middleware');
+
+module.exports = function(app) {
+  app.use(
+    '/v1',
+    createProxyMiddleware({
+      target: process.env.CRAWLER_API_URL,
+      changeOrigin: true,
+    })
+  );
+};
