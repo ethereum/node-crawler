@@ -21,7 +21,7 @@ interface NamedCount {
   count: number;
 }
 
-interface TopResponse {
+interface ClientData {
   clients: NamedCount[];
   operatingSystems: NamedCount[];
   languages: NamedCount[];
@@ -31,7 +31,7 @@ function Home() {
   const location = useLocation();
   const history = useHistory()
   const color = useColorModeValue("gray.800", "white")
-  const [data, setData] = useState<TopResponse>()
+  const [data, setData] = useState<ClientData>()
   const [filters, setFilters] = useState<FilterGroup[]>([])
 
   useEffect(() => {
@@ -45,7 +45,7 @@ function Home() {
       }
 
       const response = await fetch(`/v1/dashboard${search}`)
-      const json: TopResponse = await response.json()
+      const json: ClientData = await response.json()
 
       json.clients = appendOtherGroup(json.clients)
       json.languages = appendOtherGroup(json.languages)

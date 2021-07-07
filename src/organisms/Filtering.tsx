@@ -25,7 +25,7 @@ export type FilterItem = Filter | undefined
 export type FilterGroup = FilterItem[];
 
 export const ParseAndValidateFilters = (locationSearch: string): FilterGroup[] => {
-  const rawFilters = new URLSearchParams(locationSearch).get('filters')
+  const rawFilters = new URLSearchParams(locationSearch).get('filter')
   if (!rawFilters) {
     return []
   }
