@@ -89,10 +89,10 @@ func parseOS(input string) OSInfo {
 	var osInfo OSInfo
 	switch len(split) {
 	case 2:
-		osInfo.Os = split[0]
+		osInfo.Architecture = split[1]
 		fallthrough
 	case 1:
-		osInfo.Architecture = split[1]
+		osInfo.Os = split[0]
 	}
 	return osInfo
 }
