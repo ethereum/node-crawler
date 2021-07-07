@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -20,12 +21,19 @@ type OSInfo struct {
 	Architecture string
 }
 
+type LanguageInfo struct {
+	Name string
+	Version string
+}
+
 type ParsedInfo struct {
 	Name     string
 	Version  Version
 	Os       OSInfo
-	Language string
+	Language LanguageInfo
 }
+
+var reLanguage = regexp.MustCompile("(?P<name>[a-zA-Z]+)?-?(?P<version>[\\d+.?]+)")
 
 func (p *ParsedInfo) String() string {
 	return fmt.Sprintf("%v (%v) %v %v", p.Name, p.Version, p.Os, p.Language)
@@ -37,7 +45,7 @@ func ParseVersionString(input string) ParsedInfo {
 	s := strings.Split(input, "/")
 	switch len(s) {
 	case 4:
-		output.Language = s[3]
+		output.Language = parseLanguage(s[3])
 		fallthrough
 	case 3:
 		output.Os = parseOS(s[2])
@@ -52,6 +60,18 @@ func ParseVersionString(input string) ParsedInfo {
 		}
 	}
 	return output
+}
+
+func parseLanguage(input string) LanguageInfo {
+	var languageInfo LanguageInfo
+	match := reLanguage.FindStringSubmatch(input)
+
+	if len(match) > 0 {
+		languageInfo.Name = match[reLanguage.SubexpIndex("name")]
+		languageInfo.Version = match[reLanguage.SubexpIndex("version")]
+	}
+
+	return languageInfo
 }
 
 func parseVersion(input string) Version {

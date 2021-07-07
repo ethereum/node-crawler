@@ -21,7 +21,8 @@ func createDB(db *sql.DB) error {
 		date text,
 		os text,
 		architecture text,
-		language text,
+		language_name text,
+		language_version text,
 		PRIMARY KEY (ID)
 	);
 	delete from nodes;
@@ -43,8 +44,8 @@ func InsertCrawledNodes(db *sql.DB, crawledNodes []input.CrawledNode) error {
 			name, 
 			major, minor, patch, tag, build, date, 
 			os, architecture, 
-			language) 
-			values(?,?,?,?,?,?,?,?,?,?,?)`)
+			language_name, language_version) 
+			values(?,?,?,?,?,?,?,?,?,?,?,?)`)
 	if err != nil {
 		return err
 	}
@@ -62,7 +63,8 @@ func InsertCrawledNodes(db *sql.DB, crawledNodes []input.CrawledNode) error {
 			parsed.Version.Date,
 			parsed.Os.Os,
 			parsed.Os.Architecture,
-			parsed.Language,
+			parsed.Language.Name,
+			parsed.Language.Version,
 		)
 	}
 	return tx.Commit()

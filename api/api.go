@@ -242,6 +242,8 @@ func (a *Api) handleLondon(rw http.ResponseWriter, r *http.Request) {
 func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
+	queryHasName := strings.Contains(vars["filter"], "[\"name:")
+
 	// Where
 	where, whereArgs, err := addFilterArgs(vars)
 	if err != nil {
@@ -253,8 +255,14 @@ func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 		where = "WHERE " + where
 	}
 
+	var topLanguageQuery string
+	if queryHasName { 
+		topLanguageQuery = fmt.Sprintf("SELECT Name, Count(*) as Count FROM (SELECT language_name || language_version as Name FROM nodes %v) GROUP BY Name ORDER BY Count DESC", where)
+	} else {
+		topLanguageQuery = fmt.Sprintf("SELECT language_name as Name, COUNT(language_name) as Count FROM nodes %v GROUP BY language_name ORDER BY Count DESC", where)
+	}
+	
 	topClientsQuery := fmt.Sprintf("SELECT name as Name, COUNT(name) as Count FROM nodes %v GROUP BY name ORDER BY count DESC", where)
-	topLanguageQuery := fmt.Sprintf("SELECT language as Name, COUNT(language) as Count FROM nodes %v GROUP BY language ORDER BY count DESC", where)
 	topOsQuery := fmt.Sprintf("SELECT os as Name, COUNT(os) as Count FROM nodes %v GROUP BY os ORDER BY count DESC", where)
 	topVersionQuery := fmt.Sprintf("SELECT Name, Count(*) as Count FROM (SELECT major || '.' || minor || '.' || patch as Name FROM nodes %v) GROUP BY Name ORDER BY Count DESC ", where)
 
@@ -275,7 +283,7 @@ func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 
 	// When the filter has a name, we don't want to include that in the json response.
 	var versions []client
-	if strings.Contains(vars["filter"], "[\"name:") {
+	if queryHasName {
 		dataVersions, err := clientQuery(a.db, topVersionQuery, whereArgs...)
 		versions = dataVersions
 		if err != nil {
@@ -420,17 +428,18 @@ func createLondonQuery() (string, []interface{}) {
 
 func validateKey(key string) bool {
 	validKeys := map[string]struct{}{
-		"id":           {},
-		"name":         {},
-		"major":        {},
-		"minor":        {},
-		"patch":        {},
-		"tag":          {},
-		"build":        {},
-		"date":         {},
-		"os":           {},
-		"architecture": {},
-		"language":     {},
+		"id":                 {},
+		"name":               {},
+		"major":              {},
+		"minor":              {},
+		"patch":              {},
+		"tag":                {},
+		"build":              {},
+		"date":               {},
+		"os":                 {},
+		"architecture":       {},
+		"language_name":      {},
+		"language_version":     {},
 	}
 	_, ok := validKeys[key]
 	return ok
