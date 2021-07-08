@@ -1,9 +1,10 @@
-import { Grid, GridItem, useColorModeValue } from "@chakra-ui/react";
+import { Grid, GridItem, useColorModeValue, Text } from "@chakra-ui/react";
 import { scaleOrdinal } from "d3-scale";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import { useEffect, useState } from "react";
-import { ResponsiveContainer, BarChart, XAxis, YAxis, Bar, LabelList, Tooltip, CartesianGrid } from "recharts";
+import { ResponsiveContainer, BarChart, XAxis, YAxis, Bar, Tooltip, Cell, TooltipProps } from "recharts";
 import { Card } from "../atoms/Card";
+import { TooltipCard } from "../atoms/TooltipCard";
 import { FilterGroup, Filtering } from "../organisms/Filtering";
 import { Loader } from "../organisms/Loader";
 
@@ -65,7 +66,8 @@ function processItem(readyMap: NamedCountMap, item: NamedCount) {
 }
 
 export function London() {
-  const color = useColorModeValue("gray.800", "white")
+  const color = useColorModeValue("gray.800", "gray")
+  const barBackroundColor = useColorModeValue("rgba(255,255,255,0.3)", "rgba(0,0,0,0.3)")
   const [data, setData] = useState<ClientData>()
 
   useEffect(() => {
@@ -94,15 +96,31 @@ export function London() {
   }
 
   const renderLabelContent = (props: any): any => {
-    const { name, value, width, x, y, } = props;
-    console.log(props)
+    const { height, width, x, y, index } = props;
+    const entity = data.clients[index]
+    const fontSize = 12
     return (
-      <g transform={`translate(${width}, ${y})`} textAnchor="end" fill={color}>
-        <text x={0} y={20}>{`${value} (${(value * 100).toFixed(2)}%)`}</text>
+      <g transform={`translate(${width + x}, ${y})`} textAnchor="end">
+        <text fill={color} fontSize={fontSize} x={-15} y={(height + fontSize) / 2}>{`${entity.total} (${entity.currentPercentage}%)`}</text>
       </g>
     );
   };
 
+  const renderTooltipContent = (props: TooltipProps<any, any>): React.ReactElement | null => {
+    if (!props.active || !props.payload) {
+      return null
+    }
+
+    const payload: NamedCount = (props.payload as any)[0].payload
+    const notReadyCount = payload.total - payload.count
+    return (
+      <TooltipCard>
+        <Text fontWeight="bold">{payload.name}</Text>
+        <Text>Ready: {payload.count} ({payload.currentPercentage}%)</Text>
+        <Text>Not ready: {notReadyCount} ({Math.ceil(notReadyCount / payload.total * 100)}%)</Text>
+      </TooltipCard>
+    )
+  }
 
   return (
     <Grid gridGap="8" templateColumns="repeat(2, 1fr)" w="100%">
@@ -110,20 +128,21 @@ export function London() {
         <Filtering filters={london} />
       </GridItem>
       <GridItem colSpan={2}>
-        <Card title="London ready clients" w="99%" contentHeight={data.clients.length * 50}>
+        <Card title="London ready clients" w="99%" contentHeight={data.clients.length * 40}>
           <ResponsiveContainer>
             <BarChart data={data.clients}
               layout="vertical"
               margin={{ top: 5, right: 30, left: 60, bottom: 5 }}>
-              <XAxis type="number" stroke={color} />
+              <XAxis type="number" hide />
               <YAxis dataKey="name" type="category" yAxisId={0} />
               <YAxis dataKey="name" type="category" yAxisId={1} hide />
-              <CartesianGrid strokeDasharray="3 3" />
-              <Tooltip cursor={false} />
-              <Bar dataKey="totalPercentage" barSize={40} yAxisId={1} fill="#ccc">
-                <LabelList position="insideRight" content={renderLabelContent} />
+              <Tooltip cursor={false} content={renderTooltipContent} />
+              <Bar dataKey="totalPercentage" yAxisId={1} fill={barBackroundColor} label={renderLabelContent} />
+              <Bar dataKey="currentPercentage" yAxisId={0}>
+                {data.clients.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={colors[index % 10]} />
+                ))}
               </Bar>
-              <Bar dataKey="currentPercentage" barSize={20} yAxisId={0} fill="#8884d8" fillOpacity={0.7} />
             </BarChart>
           </ResponsiveContainer>
         </Card>

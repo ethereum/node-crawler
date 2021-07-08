@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import {
-  PieChart, Pie, Cell, Tooltip,
+  PieChart, Pie, Cell, Tooltip, 
   LabelList, Bar, BarChart, XAxis, YAxis, ResponsiveContainer
 } from 'recharts';
 
 import { scaleOrdinal } from 'd3-scale';
 import { schemeCategory10 } from 'd3-scale-chromatic';
 
-import { Grid, GridItem, useColorModeValue } from '@chakra-ui/react';
+import { Grid, GridItem, useColorModeValue, Text } from '@chakra-ui/react';
 import { Card } from '../atoms/Card';
 import { useHistory, useLocation } from 'react-router-dom';
 import { Loader } from '../organisms/Loader';
 import { appendOtherGroup } from '../data/DataMassager';
 import { FilterGroup, Filtering, ParseAndValidateFilters } from '../organisms/Filtering';
+import { TooltipCard } from '../atoms/TooltipCard';
 
 const colors = scaleOrdinal(schemeCategory10).range();
 
@@ -33,7 +34,7 @@ interface ClientData {
 function Home() {
   const location = useLocation();
   const history = useHistory()
-  const color = useColorModeValue("gray.800", "white")
+  const color = useColorModeValue("gray.800", "gray")
   const [data, setData] = useState<ClientData>()
   const [filters, setFilters] = useState<FilterGroup[]>([])
 
@@ -85,6 +86,19 @@ function Home() {
     history.push(`/${e.activePayload[0].payload.name}`)
   }
 
+  const renderTooltipContent = (props: any): any => {
+    if (!props.active || !props.payload) {
+      return null
+    }
+
+    return (
+      <TooltipCard>
+        <Text fontWeight="bold">{props.name}</Text>
+        <Text>Count: {props.value}</Text>
+      </TooltipCard>
+    )
+  };
+
   return (
     <Grid gridGap="8" templateColumns="repeat(2, 1fr)" w="100%">
       <GridItem colSpan={2}>
@@ -99,9 +113,9 @@ function Home() {
               margin={{ left: 60 }}
               onClick={onClientClick}
             >
-              <XAxis type="number" stroke={color} hide />
-              <YAxis dataKey="name" type="category" stroke={color} interval={0} />
-              <Tooltip cursor={false} />
+              <XAxis type="number" hide stroke={color} />
+              <YAxis dataKey="name" type="category" interval={0} stroke={color} />
+              <Tooltip cursor={false} label={renderTooltipContent}/>
               <Bar dataKey="count">
                 {data.clients.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={colors[index % 10]} />
