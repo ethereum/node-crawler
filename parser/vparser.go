@@ -28,12 +28,13 @@ type LanguageInfo struct {
 
 type ParsedInfo struct {
 	Name     string
+	Label    string
 	Version  Version
 	Os       OSInfo
 	Language LanguageInfo
 }
 
-var reLanguage = regexp.MustCompile("(?P<name>[a-zA-Z]+)?-?(?P<version>[\\d+.?]+)")
+var reLanguage = regexp.MustCompile(`(?P<name>[a-zA-Z]+)?-?(?P<version>[\d+.?]+)`)
 
 func (p *ParsedInfo) String() string {
 	return fmt.Sprintf("%v (%v) %v %v", p.Name, p.Version, p.Os, p.Language)
@@ -42,22 +43,22 @@ func (p *ParsedInfo) String() string {
 func ParseVersionString(input string) ParsedInfo {
 	var output ParsedInfo
 	// version string consists of four components, divided by /
-	s := strings.Split(input, "/")
-	switch len(s) {
-	case 4:
-		output.Language = parseLanguage(s[3])
-		fallthrough
-	case 3:
-		output.Os = parseOS(s[2])
-		fallthrough
-	case 2:
+	s := strings.Split(strings.ToLower(input), "/")
+	l := len(s)
+	output.Name = s[0]
+	if output.Name == "" {
+		output.Name = "unknown"
+	}
+
+	if l == 5 {
+		output.Label = s[1]
+		output.Version = parseVersion(s[2])
+		output.Os = parseOS(s[3])
+		output.Language = parseLanguage(s[4])
+	} else if l == 4 {
 		output.Version = parseVersion(s[1])
-		fallthrough
-	case 1:
-		output.Name = strings.ToLower(s[0])
-		if output.Name == "" {
-			output.Name = "unknown"
-		}
+		output.Os = parseOS(s[2])
+		output.Language = parseLanguage(s[3])
 	}
 	return output
 }
