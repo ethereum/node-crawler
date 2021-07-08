@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 
 import { scaleOrdinal } from 'd3-scale';
-import { schemeCategory10} from 'd3-scale-chromatic';
+import { schemeCategory10 } from 'd3-scale-chromatic';
 
 import { Grid, GridItem, Heading, useColorModeValue } from '@chakra-ui/react';
 import { Card } from '../atoms/Card';
@@ -38,7 +38,7 @@ function Home() {
     const run = async () => {
       const url = new URL(window.location.protocol + window.location.host + '/v1/dashboard')
       const params = {
-        "filter":  `[["name:${id}"]]`
+        "filter": `[["name:${id}"]]`
       }
       url.search = new URLSearchParams(params).toString();
       const response = await fetch(url.toString())
@@ -65,7 +65,7 @@ function Home() {
   if (!data) {
     return <Loader>Processing {id} data</Loader>
   }
-  
+
   const renderLabelContent: React.FunctionComponent = (props: any) => {
     const { name, value, percent, x, y, midAngle } = props;
     return (
@@ -85,10 +85,10 @@ function Home() {
             <BarChart
               data={data.versions}
               layout="vertical"
-              margin={{left: 60}}
+              margin={{ left: 60 }}
             >
-              <XAxis type="number"  stroke={color} hide />
-              <YAxis dataKey="name" type="category" stroke={color} interval={0}/>
+              <XAxis type="number" stroke={color} hide />
+              <YAxis dataKey="name" type="category" stroke={color} interval={0} />
               <Tooltip cursor={false} />
               <Bar dataKey="count">
                 {data.versions.map((entry, index) => (

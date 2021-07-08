@@ -88,7 +88,7 @@ function Home() {
   return (
     <Grid gridGap="8" templateColumns="repeat(2, 1fr)" w="100%">
       <GridItem colSpan={2}>
-        <Filtering filters={filters}/>
+        <Filtering filters={filters} />
       </GridItem>
       <GridItem colSpan={2}>
         <Card title="Popular Clients" w="99%" contentHeight={data.clients.length * 30}>
@@ -112,7 +112,7 @@ function Home() {
           </ResponsiveContainer>
         </Card>
       </GridItem>
-      
+
       <Card title="Popular Operating Systems" w="99%" contentHeight={300}>
         <ResponsiveContainer>
           <PieChart>
