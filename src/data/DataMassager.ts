@@ -3,15 +3,28 @@ interface NamedCount {
 	count: number;
 }
 
-export function appendOtherGroup(list: NamedCount[]): NamedCount[] {
-  if (list.length <= 10){
-    return list;
-  }
+export function appendOtherGroup(list: NamedCount[]): [NamedCount[], number] {
+  let unknownItemCount = 0
   
-  const newList = list.slice(0, 10)
-  const others = list.slice(10).reduce((prev, curr) => {
-    return prev + curr.count
-  }, 0)
-  newList.push({name: 'others', count: others})
-  return newList
+  const otherItem: NamedCount = {
+    name: 'Other',
+    count: 0
+  };
+
+  const filteredList: NamedCount[] = []
+  list.forEach((item) => {
+    if (item.name === 'unknown' || item.name === '') {
+      unknownItemCount++;
+    } else if (filteredList.length > 9) {
+      otherItem.count += item.count
+    } else {
+      filteredList.push(item)
+    }
+  })
+
+  if (otherItem.count > 0) {
+    filteredList.push(otherItem)
+  }
+
+  return [filteredList, unknownItemCount];
 }

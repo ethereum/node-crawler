@@ -23,8 +23,11 @@ interface NamedCount {
 
 interface ClientData {
   clients: NamedCount[];
+  clientsUnknown: number;
   operatingSystems: NamedCount[];
+  operatingSystemsUnknown: number;
   languages: NamedCount[];
+  languagesUnknown: number;
 }
 
 function Home() {
@@ -47,9 +50,16 @@ function Home() {
       const response = await fetch(`/v1/dashboard${search}`)
       const json: ClientData = await response.json()
 
-      json.clients = appendOtherGroup(json.clients)
-      json.languages = appendOtherGroup(json.languages)
-      json.operatingSystems = appendOtherGroup(json.operatingSystems)
+      const [clients, unknownClientCount] = appendOtherGroup(json.clients)
+      const [languages, unknownLanguageCount] = appendOtherGroup(json.languages)
+      const [operatingSystems, unknownOperatingSystemCount] = appendOtherGroup(json.operatingSystems)
+
+      json.clients = clients
+      json.clientsUnknown = unknownClientCount
+      json.languages = languages
+      json.languagesUnknown = unknownLanguageCount
+      json.operatingSystems = operatingSystems
+      json.operatingSystemsUnknown = unknownOperatingSystemCount
 
       setData(json)
     }
@@ -81,17 +91,16 @@ function Home() {
         <Filtering filters={filters}/>
       </GridItem>
       <GridItem colSpan={2}>
-        <Card title="Popular Clients" w="99%" contentHeight={data.clients.length * 50}>
+        <Card title="Popular Clients" w="99%" contentHeight={data.clients.length * 30}>
           <ResponsiveContainer>
             <BarChart
-              height={data.clients.length * 50}
               data={data.clients}
               layout="vertical"
               margin={{ left: 60 }}
               onClick={onClientClick}
             >
-              <XAxis type="number" stroke={color} />
-              <YAxis dataKey="name" type="category" stroke={color} />
+              <XAxis type="number" stroke={color} hide />
+              <YAxis dataKey="name" type="category" stroke={color} interval={0} />
               <Tooltip cursor={false} />
               <Bar dataKey="count">
                 {data.clients.map((entry, index) => (

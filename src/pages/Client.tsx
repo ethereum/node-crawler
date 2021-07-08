@@ -22,8 +22,11 @@ interface NamedCount {
 
 interface ClientData {
   versions: NamedCount[];
+  versionsUnknown: number;
   operatingSystems: NamedCount[];
+  operatingSystemsUnknown: number;
   languages: NamedCount[];
+  languagesUnknown: number;
 }
 
 function Home() {
@@ -41,9 +44,16 @@ function Home() {
       const response = await fetch(url.toString())
       const json: ClientData = await response.json();
 
-      json.versions = appendOtherGroup(json.versions)
-      json.languages = appendOtherGroup(json.languages)
-      json.operatingSystems = appendOtherGroup(json.operatingSystems)
+      const [versions, unknownVersionsCount] = appendOtherGroup(json.versions)
+      const [languages, unknownLanguagesCount] = appendOtherGroup(json.languages)
+      const [operatingSystems, unknownOperatingSystemsCount] = appendOtherGroup(json.operatingSystems)
+
+      json.versions = versions
+      json.versionsUnknown = unknownVersionsCount
+      json.languages = languages
+      json.languagesUnknown = unknownLanguagesCount
+      json.operatingSystems = operatingSystems
+      json.operatingSystemsUnknown = unknownOperatingSystemsCount
 
       setData(json)
     }
@@ -70,16 +80,15 @@ function Home() {
     <Grid gridGap="8" templateColumns="repeat(2, 1fr)" w="100%">
       <Heading>{id}</Heading>
       <GridItem colSpan={2}>
-        <Card title="Top Versions" w="99%" contentHeight={data.versions.length * 50}>
+        <Card title="Top Versions" w="99%" contentHeight={data.versions.length * 30}>
           <ResponsiveContainer>
             <BarChart
-              height={data.versions.length * 50}
               data={data.versions}
               layout="vertical"
               margin={{left: 60}}
             >
-              <XAxis type="number"  stroke={color}/>
-              <YAxis dataKey="name" type="category" stroke={color}/>
+              <XAxis type="number"  stroke={color} hide />
+              <YAxis dataKey="name" type="category" stroke={color} interval={0}/>
               <Tooltip cursor={false} />
               <Bar dataKey="count">
                 {data.versions.map((entry, index) => (

@@ -1,9 +1,8 @@
-import { Grid, GridItem, useColorModeValue, Text } from "@chakra-ui/react";
+import { Grid, GridItem, useColorModeValue } from "@chakra-ui/react";
 import { scaleOrdinal } from "d3-scale";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import { useEffect, useState } from "react";
-import { ResponsiveContainer, BarChart, XAxis, YAxis, Bar, Cell, LabelList, Tooltip, CartesianGrid } from "recharts";
-import { isIfStatement } from "typescript";
+import { ResponsiveContainer, BarChart, XAxis, YAxis, Bar,  LabelList, Tooltip, CartesianGrid } from "recharts";
 import { Card } from "../atoms/Card";
 import { Loader } from "../organisms/Loader";
 
@@ -45,6 +44,14 @@ const londonAllFilter = JSON.stringify([
 	["name:ethereum-js"]
 ])
 
+type NamedCountMap = { [name: string]: NamedCount } 
+
+function convertListToMap(list: NamedCount[]): NamedCountMap {
+	return list.reduce((map: NamedCountMap, item) => {
+		map[item.name] = item;
+		return map;
+	}, {});
+}
 
 export function London() {
   const color = useColorModeValue("gray.800", "white")
@@ -57,27 +64,31 @@ export function London() {
 			const allJson: ClientData = await responseAll.json()
 			const readyJson: ClientData = await responseReady.json()
 
-			readyJson.languages = readyJson.languages.map((item, idx) => {
-				item.total = allJson.languages[idx].count
+			const clientsMap = convertListToMap(allJson.clients)
+			const operatingSystemsMap = convertListToMap(allJson.operatingSystems)
+			const languagesMap = convertListToMap(allJson.languages)
+
+			readyJson.languages = readyJson.languages.map((item) => {
+				item.total = languagesMap[item.name].count
 				item.totalPercentage = 100
 				item.currentPercentage = Math.ceil(item.count / item.total * 100)
 				return item
 			})
 
 			readyJson.operatingSystems = readyJson.operatingSystems.map((item, idx) => {
-				item.total = allJson.operatingSystems[idx].count
+				item.total = operatingSystemsMap[item.name].count
 				item.totalPercentage = 100
 				item.currentPercentage = Math.ceil(item.count / item.total * 100)
 				return item
 			})
 
 			readyJson.clients = readyJson.clients.map((item, idx) => {
-				item.total = allJson.clients[idx].count
+				item.total = clientsMap[item.name].count
 				item.totalPercentage = 100
 				item.currentPercentage = Math.ceil(item.count / item.total * 100)
 				return item
 			})
-			console.log(readyJson)
+	
 			setData(readyJson)
 		}
 
