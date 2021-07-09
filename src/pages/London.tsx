@@ -1,4 +1,4 @@
-import { Grid, GridItem, useColorModeValue, Text } from "@chakra-ui/react";
+import { Grid, GridItem, useColorModeValue, Text, Table, Thead, Tbody, Td, Th, Tr } from "@chakra-ui/react";
 import { scaleOrdinal } from "d3-scale";
 import { schemeCategory10 } from "d3-scale-chromatic";
 import { useEffect, useState } from "react";
@@ -14,8 +14,8 @@ interface NamedCount {
   name: string;
   count: number;
   total: number;
-  currentPercentage: number;
-  totalPercentage: number;
+  readyPercentage: number;
+  notReadyPercentage: number;
 }
 
 interface ClientData {
@@ -60,8 +60,8 @@ function convertListToMap(list: NamedCount[]): NamedCountMap {
 function processItem(readyMap: NamedCountMap, item: NamedCount) {
   item.total = item.count
   item.count = item.name in readyMap ? readyMap[item.name].count : 0
-  item.totalPercentage = 100
-  item.currentPercentage = Math.ceil(item.count / item.total * 100)
+  item.readyPercentage = Math.ceil(item.count / item.total * 100)
+  item.notReadyPercentage = Math.ceil((item.total - item.count) / item.total * 100)
   return item
 }
 
@@ -101,7 +101,7 @@ export function London() {
     const fontSize = 12
     return (
       <g transform={`translate(${width + x}, ${y})`} textAnchor="end">
-        <text fill={color} fontSize={fontSize} x={-15} y={(height + fontSize) / 2}>{`${entity.total} (${entity.currentPercentage}%)`}</text>
+        <text fill={color} fontSize={fontSize} x={-15} y={(height + fontSize) / 2}>{`${entity.total} (${entity.readyPercentage}%)`}</text>
       </g>
     );
   };
@@ -116,8 +116,8 @@ export function London() {
     return (
       <TooltipCard>
         <Text fontWeight="bold">{payload.name}</Text>
-        <Text>Ready: {payload.count} ({payload.currentPercentage}%)</Text>
-        <Text>Not ready: {notReadyCount} ({Math.ceil(notReadyCount / payload.total * 100)}%)</Text>
+        <Text>Ready: {payload.count} ({payload.readyPercentage}%)</Text>
+        <Text>Not ready: {notReadyCount} ({payload.notReadyPercentage}%)</Text>
       </TooltipCard>
     )
   }
@@ -127,24 +127,26 @@ export function London() {
       <GridItem colSpan={2}>
         <Filtering filters={london} />
       </GridItem>
-      <GridItem colSpan={2}>
-        <Card title="London ready clients" w="99%" contentHeight={data.clients.length * 40}>
-          <ResponsiveContainer>
-            <BarChart data={data.clients}
-              layout="vertical"
-              margin={{ top: 5, right: 30, left: 60, bottom: 5 }}>
-              <XAxis type="number" hide />
-              <YAxis dataKey="name" type="category" yAxisId={0} />
-              <YAxis dataKey="name" type="category" yAxisId={1} hide />
-              <Tooltip cursor={false} content={renderTooltipContent} />
-              <Bar dataKey="totalPercentage" yAxisId={1} fill={barBackroundColor} label={renderLabelContent} />
-              <Bar dataKey="currentPercentage" yAxisId={0}>
-                {data.clients.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={colors[index % 10]} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+      <GridItem colSpan={1}>
+        <Card title="London clients" w="99%" contentHeight={data.clients.length * 40}>
+          <Table>
+            <Thead>
+              <Tr>
+                <Th>Client</Th>
+                <Th>Ready</Th>
+                <Th>Not-Ready</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {data.clients.map((item, index) => (
+                <Tr>
+                  <Td>{item.name}</Td>
+                  <Td>{item.count} ({item.readyPercentage}%)</Td>
+                  <Td>{item.total - item.count} ({item.notReadyPercentage}%)</Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
         </Card>
       </GridItem>
     </Grid>
