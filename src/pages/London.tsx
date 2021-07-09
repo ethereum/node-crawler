@@ -1,14 +1,16 @@
-import { Grid, GridItem, useColorModeValue, Text, Table, Thead, Tbody, Td, Th, Tr } from "@chakra-ui/react";
-import { scaleOrdinal } from "d3-scale";
-import { schemeCategory10 } from "d3-scale-chromatic";
+import { Grid, GridItem, useColorModeValue, Table, Thead, Tbody, Td, Th, Tr } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { ResponsiveContainer, BarChart, XAxis, YAxis, Bar, Tooltip, Cell, TooltipProps } from "recharts";
+import { ResponsiveContainer, Cell, Pie, PieChart } from "recharts";
 import { Card } from "../atoms/Card";
-import { TooltipCard } from "../atoms/TooltipCard";
 import { FilterGroup, Filtering } from "../organisms/Filtering";
 import { Loader } from "../organisms/Loader";
 
-const colors = scaleOrdinal(schemeCategory10).range();
+interface Distribution {
+  name: string;
+  count: number;
+  percentage: number;
+  color: string;
+}
 
 interface NamedCount {
   name: string;
@@ -22,6 +24,7 @@ interface ClientData {
   clients: NamedCount[];
   operatingSystems: NamedCount[];
   languages: NamedCount[];
+  distribution: Distribution[]
 }
 
 const london: FilterGroup[] = [
@@ -67,7 +70,6 @@ function processItem(readyMap: NamedCountMap, item: NamedCount) {
 
 export function London() {
   const color = useColorModeValue("gray.800", "gray")
-  const barBackroundColor = useColorModeValue("rgba(255,255,255,0.3)", "rgba(0,0,0,0.3)")
   const [data, setData] = useState<ClientData>()
 
   useEffect(() => {
@@ -85,6 +87,20 @@ export function London() {
       allJson.operatingSystems = allJson.operatingSystems.map((item) => processItem(readyOperatingSystemsMap, item))
       allJson.clients = allJson.clients.map((item) => processItem(readyClientsMap, item))
 
+      let readyCount = 0
+      let notReadyCount = 0
+      allJson.clients.forEach(c => {
+        readyCount += c.count
+        notReadyCount += c.total - c.count
+      })
+
+      let totalCount = readyCount + notReadyCount
+
+      allJson.distribution = [
+        { name: 'Ready', count: readyCount, percentage: Math.ceil(readyCount / totalCount * 100), color: 'green' },
+        { name: 'Not ready', count: notReadyCount, percentage: Math.ceil(notReadyCount / totalCount * 100), color: 'red' }
+      ]
+
       setData(allJson)
     }
 
@@ -96,31 +112,14 @@ export function London() {
   }
 
   const renderLabelContent = (props: any): any => {
-    const { height, width, x, y, index } = props;
-    const entity = data.clients[index]
-    const fontSize = 12
+    const { name, value, percent, x, y, midAngle } = props;
     return (
-      <g transform={`translate(${width + x}, ${y})`} textAnchor="end">
-        <text fill={color} fontSize={fontSize} x={-15} y={(height + fontSize) / 2}>{`${entity.total} (${entity.readyPercentage}%)`}</text>
+      <g transform={`translate(${x}, ${y})`} textAnchor={(midAngle < -90 || midAngle >= 90) ? 'end' : 'start'} fill={color}>
+        <text x={0} y={0}>{`${name || "unknown"}`}</text>
+        <text x={0} y={20}>{`${value} (${(percent * 100).toFixed(2)}%)`}</text>
       </g>
     );
   };
-
-  const renderTooltipContent = (props: TooltipProps<any, any>): React.ReactElement | null => {
-    if (!props.active || !props.payload) {
-      return null
-    }
-
-    const payload: NamedCount = (props.payload as any)[0].payload
-    const notReadyCount = payload.total - payload.count
-    return (
-      <TooltipCard>
-        <Text fontWeight="bold">{payload.name}</Text>
-        <Text>Ready: {payload.count} ({payload.readyPercentage}%)</Text>
-        <Text>Not ready: {notReadyCount} ({payload.notReadyPercentage}%)</Text>
-      </TooltipCard>
-    )
-  }
 
   return (
     <Grid gridGap="8" templateColumns="repeat(2, 1fr)" w="100%">
@@ -139,7 +138,7 @@ export function London() {
             </Thead>
             <Tbody>
               {data.clients.map((item, index) => (
-                <Tr>
+                <Tr key={index}>
                   <Td>{item.name}</Td>
                   <Td>{item.count} ({item.readyPercentage}%)</Td>
                   <Td>{item.total - item.count} ({item.notReadyPercentage}%)</Td>
@@ -147,6 +146,36 @@ export function London() {
               ))}
             </Tbody>
           </Table>
+        </Card>
+      </GridItem>
+      <GridItem colSpan={1}>
+        <Card title="Client distribution" w="99%" contentHeight={300}>
+          <ResponsiveContainer>
+            <PieChart>
+              <Pie
+                data={data.distribution}
+                stroke="none"
+                dataKey="count"
+                startAngle={180}
+                endAngle={-180}
+                innerRadius={30}
+                minAngle={20}
+                outerRadius={100}
+                paddingAngle={2}
+                label={renderLabelContent}
+                isAnimationActive={false}
+              >
+                {
+                  data.distribution.map((entry, index) => (
+                    <Cell
+                      key={`slice-${index}`}
+                      fill={entry.color}
+                    />
+                  ))
+                }
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
         </Card>
       </GridItem>
     </Grid>
