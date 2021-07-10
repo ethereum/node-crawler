@@ -115,7 +115,7 @@ function Home() {
         <Filtering filters={filters} />
       </GridItem>
       <GridItem colSpan={2}>
-        <Card title="Popular Clients" w="99%" contentHeight={data.clients.length * 30}>
+        <Card title="Popular Clients" w="99%" contentHeight={data.clients.length * 40}>
           <ResponsiveContainer>
             <BarChart
               data={data.clients}

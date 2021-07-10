@@ -74,8 +74,8 @@ export function London() {
       let totalCount = readyCount + notReadyCount
 
       allJson.distribution = [
-        { name: 'Ready', count: readyCount, percentage: Math.ceil(readyCount / totalCount * 100), color: 'green' },
-        { name: 'Not ready', count: notReadyCount, percentage: Math.ceil(notReadyCount / totalCount * 100), color: 'red' }
+        { name: 'Ready', count: readyCount, percentage: Math.ceil(readyCount / totalCount * 100), color: '#7fda91' },
+        { name: 'Not ready', count: notReadyCount, percentage: Math.ceil(notReadyCount / totalCount * 100), color: '#ff6c6c' }
       ]
 
       setData(allJson)
@@ -135,10 +135,8 @@ export function London() {
                 dataKey="count"
                 startAngle={180}
                 endAngle={-180}
-                innerRadius={30}
                 minAngle={20}
                 outerRadius={100}
-                paddingAngle={2}
                 label={renderLabelContent}
                 isAnimationActive={false}
               >

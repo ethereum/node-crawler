@@ -80,7 +80,7 @@ function Home() {
     <Grid gridGap="8" templateColumns="repeat(2, 1fr)" w="100%">
       <Heading>{id}</Heading>
       <GridItem colSpan={2}>
-        <Card title="Top Versions" w="99%" contentHeight={data.versions.length * 30}>
+        <Card title="Top Versions" w="99%" contentHeight={data.versions.length * 40}>
           <ResponsiveContainer>
             <BarChart
               data={data.versions}
