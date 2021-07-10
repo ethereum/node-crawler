@@ -2,7 +2,7 @@ import { Grid, GridItem, useColorModeValue, Table, Thead, Tbody, Td, Th, Tr } fr
 import { useEffect, useState } from "react";
 import { ResponsiveContainer, Cell, Pie, PieChart } from "recharts";
 import { Card } from "../atoms/Card";
-import { londonFilterString, knownNodesFilterString, normalizeClientNames, londonFilter } from "../config";
+import { londonFilterString, knownNodesFilterString, normalizeClientNames, londonFilter, colors } from "../config";
 import { Filtering } from "../organisms/Filtering";
 import { Loader } from "../organisms/Loader";
 
@@ -57,12 +57,10 @@ export function London() {
       const readyJson: ClientData = await responseReady.json()
 
       const readyClientsMap = convertListToMap(readyJson.clients)
-      const readyOperatingSystemsMap = convertListToMap(readyJson.operatingSystems)
-      const readyLanguagesMap = convertListToMap(readyJson.languages)
 
-      allJson.languages = allJson.languages.map((item) => processItem(readyLanguagesMap, item))
-      allJson.operatingSystems = allJson.operatingSystems.map((item) => processItem(readyOperatingSystemsMap, item))
       allJson.clients = allJson.clients.map((item) => processItem(readyClientsMap, item))
+      allJson.languages = readyJson.languages
+      allJson.operatingSystems = readyJson.operatingSystems
 
       let readyCount = 0
       let notReadyCount = 0
@@ -104,7 +102,7 @@ export function London() {
         <Filtering filters={londonFilter} />
       </GridItem>
       <GridItem colSpan={1}>
-        <Card title="London clients" w="99%" contentHeight={data.clients.length * 40}>
+        <Card title="London Clients" w="99%" contentHeight={data.clients.length * 40} h="100%">
           <Table>
             <Thead>
               <Tr>
@@ -126,7 +124,7 @@ export function London() {
         </Card>
       </GridItem>
       <GridItem colSpan={1}>
-        <Card title="Client distribution" w="99%" contentHeight={300}>
+        <Card title="London Client Distribution" w="99%" contentHeight={300}>
           <ResponsiveContainer>
             <PieChart>
               <Pie
@@ -153,6 +151,62 @@ export function London() {
           </ResponsiveContainer>
         </Card>
       </GridItem>
+      
+      <Card title="London Operating Systems" w="99%" contentHeight={300}>
+        <ResponsiveContainer>
+          <PieChart>
+            <Pie
+              data={data.operatingSystems}
+              dataKey="count"
+              startAngle={180}
+              endAngle={-180}
+              innerRadius={30}
+              minAngle={20}
+              outerRadius={100}
+              paddingAngle={10}
+              label={renderLabelContent}
+              isAnimationActive={false}
+            >
+              {
+                data.operatingSystems.map((entry, index) => (
+                  <Cell
+                    key={`slice-${index}`}
+                    fill={colors[index % 10] as string}
+                  />
+                ))
+              }
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+      </Card>
+
+      <Card title="London Runtimes" w="99%" contentHeight={300}>
+        <ResponsiveContainer>
+          <PieChart>
+            <Pie
+              data={data.languages}
+              dataKey="count"
+              startAngle={180}
+              endAngle={-180}
+              innerRadius={30}
+              outerRadius={100}
+              paddingAngle={20}
+              minAngle={20}
+              label={renderLabelContent}
+              isAnimationActive={false}
+            >
+              {
+                data.languages.map((entry, index) => (
+                  <Cell
+                    key={`slice-${index}`}
+                    fill={colors[index % 10] as string}
+                  />
+                ))
+              }
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+      </Card>
     </Grid>
   )
 }
