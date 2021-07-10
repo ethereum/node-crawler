@@ -3,26 +3,7 @@ import React, { useRef } from "react";
 import { useState } from "react";
 import { useEffect } from "react";
 import { VscClose, VscFilter } from "react-icons/vsc"
-
-export type FilterOperator = "eq" | "not" | "lt" | "lte" | "gt" | "gte"
-
-const FilterOperatorToSymbol = {
-  "eq": "=",
-  "not": "!=",
-  "lt": "<",
-  "lte": "<=",
-  "gt": ">",
-  "gte": ">="
-}
-
-export interface Filter {
-  name: string;
-  value: string;
-  operator?: FilterOperator;
-}
-
-export type FilterItem = Filter | undefined
-export type FilterGroup = FilterItem[];
+import { Filter, FilterGroup, FilterOperatorToSymbol, FilterItem } from "../data/FilterTypes";
 
 export const ParseAndValidateFilters = (locationSearch: string): FilterGroup[] => {
   const rawFilters = new URLSearchParams(locationSearch).get('filter')

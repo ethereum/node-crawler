@@ -2,7 +2,8 @@ import { Grid, GridItem, useColorModeValue, Table, Thead, Tbody, Td, Th, Tr } fr
 import { useEffect, useState } from "react";
 import { ResponsiveContainer, Cell, Pie, PieChart } from "recharts";
 import { Card } from "../atoms/Card";
-import { FilterGroup, Filtering } from "../organisms/Filtering";
+import { londonFilterString, knownNodesFilterString, normalizeClientNames, londonFilter } from "../config";
+import { Filtering } from "../organisms/Filtering";
 import { Loader } from "../organisms/Loader";
 
 interface Distribution {
@@ -27,35 +28,11 @@ interface ClientData {
   distribution: Distribution[]
 }
 
-const london: FilterGroup[] = [
-  [{ name: 'name', value: 'geth' }, { name: 'major', value: '1', operator: 'gte' }, { name: 'minor', value: '10', operator: 'gte' }, { name: 'patch', value: '4', operator: 'gte' }],
-  [{ name: 'name', value: 'nethermind' }, { name: 'major', value: '1', operator: 'gte' }, { name: 'minor', value: '10', operator: 'gte' }, { name: 'patch', value: '73', operator: 'gte' }],
-  [{ name: 'name', value: 'turbogeth' }, { name: 'major', value: '2021', operator: 'gte' }, { name: 'minor', value: '6', operator: 'gte' }, { name: 'patch', value: '4', operator: 'gte' }],
-  [{ name: 'name', value: 'turbo-geth' }, { name: 'major', value: '2021', operator: 'gte' }, { name: 'minor', value: '6', operator: 'gte' }, { name: 'patch', value: '4', operator: 'gte' }],
-  [{ name: 'name', value: 'erigon' }, { name: 'major', value: '2021', operator: 'gte' }, { name: 'minor', value: '6', operator: 'gte' }, { name: 'patch', value: '4', operator: 'gte' }],
-  [{ name: 'name', value: 'besu' }, { name: 'major', value: '21', operator: 'gte' }, { name: 'minor', value: '7', operator: 'gte' }, { name: 'patch', value: '0', operator: 'gte' }],
-  [{ name: 'name', value: 'openethereum' }, { name: 'major', value: '3', operator: 'gte' }, { name: 'minor', value: '3', operator: 'gte' }, { name: 'patch', value: '0', operator: 'gte' }],
-  [{ name: 'name', value: 'ethereum-js' }, { name: 'major', value: '5', operator: 'gte' }, { name: 'minor', value: '4', operator: 'gte' }, { name: 'patch', value: '1', operator: 'gte' }],
-]
-
-const normalizeNames: { [key: string]: string } = {
-  'turbogeth': 'erigon',
-  'turbo-geth': 'erigon',
-}
-
-const londonFilter = JSON.stringify(london.map(l => (l.map(f => {
-  const tokens = [f?.name, f?.value]
-  if (f?.operator) tokens.push(f?.operator)
-  return tokens.join(':')
-}))))
-
-const londonAllFilter = JSON.stringify(london.map(l => ([`name:${l[0]?.value}`])))
-
 type NamedCountMap = { [name: string]: NamedCount }
 
 function convertListToMap(list: NamedCount[]): NamedCountMap {
   return list.reduce((map: NamedCountMap, item) => {
-    map[normalizeNames[item.name] || item.name] = item;
+    map[normalizeClientNames[item.name] || item.name] = item;
     return map;
   }, {});
 }
@@ -74,8 +51,8 @@ export function London() {
 
   useEffect(() => {
     const run = async () => {
-      const responseAll = await fetch(`/v1/dashboard?filter=${londonAllFilter}`)
-      const responseReady = await fetch(`/v1/dashboard?filter=${londonFilter}`)
+      const responseAll = await fetch(`/v1/dashboard${knownNodesFilterString}`)
+      const responseReady = await fetch(`/v1/dashboard${londonFilterString}`)
       const allJson: ClientData = await responseAll.json()
       const readyJson: ClientData = await responseReady.json()
 
@@ -124,7 +101,7 @@ export function London() {
   return (
     <Grid gridGap="8" templateColumns="repeat(2, 1fr)" w="100%">
       <GridItem colSpan={2}>
-        <Filtering filters={london} />
+        <Filtering filters={londonFilter} />
       </GridItem>
       <GridItem colSpan={1}>
         <Card title="London clients" w="99%" contentHeight={data.clients.length * 40}>

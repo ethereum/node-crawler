@@ -12,8 +12,10 @@ import { Card } from '../atoms/Card';
 import { useHistory, useLocation } from 'react-router-dom';
 import { Loader } from '../organisms/Loader';
 import { appendOtherGroup } from '../data/DataMassager';
-import { FilterGroup, Filtering, ParseAndValidateFilters } from '../organisms/Filtering';
+import { Filtering, ParseAndValidateFilters } from '../organisms/Filtering';
 import { TooltipCard } from '../atoms/TooltipCard';
+import { FilterGroup } from '../data/FilterTypes';
+import { knownNodesFilter, knownNodesFilterString } from '../config';
 
 const colors = scaleOrdinal(schemeCategory10).range();
 
@@ -41,12 +43,20 @@ function Home() {
   useEffect(() => {
     const run = async () => {
       let search = ''
-      try {
-        setFilters(ParseAndValidateFilters(location.search));
+      let searchFilters: FilterGroup[] = []
+      if (location.search) {
         search = location.search
-      } catch (e) {
-        console.error(e);
+        try {
+          searchFilters = ParseAndValidateFilters(search);
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        search = knownNodesFilterString
+        searchFilters = knownNodesFilter
       }
+
+      setFilters(searchFilters)
 
       const response = await fetch(`/v1/dashboard${search}`)
       const json: ClientData = await response.json()
