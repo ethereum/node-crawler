@@ -2,7 +2,7 @@ import { Grid, GridItem, useColorModeValue, Table, Thead, Tbody, Td, Th, Tr } fr
 import { useEffect, useState } from "react";
 import { ResponsiveContainer, Cell, Pie, PieChart } from "recharts";
 import { Card } from "../atoms/Card";
-import { londonFilterString, knownNodesFilterString, normalizeClientNames, londonFilter, colors } from "../config";
+import { londonFilterString, knownNodesFilterString, normalizeClientNames, londonFilter, colors, LayoutEightPadding, LayoutTwoColSpan, LayoutTwoColumn } from "../config";
 import { Filtering } from "../organisms/Filtering";
 import { Loader } from "../organisms/Loader";
 
@@ -97,61 +97,57 @@ export function London() {
   };
 
   return (
-    <Grid gridGap="8" templateColumns="repeat(2, 1fr)" w="100%">
-      <GridItem colSpan={2}>
+    <Grid gridGap={LayoutEightPadding} templateColumns={LayoutTwoColumn} w="100%">
+      <GridItem colSpan={LayoutTwoColSpan}>
         <Filtering filters={londonFilter} />
       </GridItem>
-      <GridItem colSpan={1}>
-        <Card title="London Clients" w="99%" contentHeight={data.clients.length * 40} h="100%">
-          <Table>
-            <Thead>
-              <Tr>
-                <Th>Client</Th>
-                <Th>Ready</Th>
-                <Th>Not-Ready</Th>
+      <Card title="London Clients" w="99%" contentHeight={data.clients.length * 40} h="100%">
+        <Table>
+          <Thead>
+            <Tr>
+              <Th>Client</Th>
+              <Th>Ready</Th>
+              <Th>Not-Ready</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {data.clients.map((item, index) => (
+              <Tr key={index}>
+                <Td>{item.name}</Td>
+                <Td>{item.count} ({item.readyPercentage}%)</Td>
+                <Td>{item.total - item.count} ({item.notReadyPercentage}%)</Td>
               </Tr>
-            </Thead>
-            <Tbody>
-              {data.clients.map((item, index) => (
-                <Tr key={index}>
-                  <Td>{item.name}</Td>
-                  <Td>{item.count} ({item.readyPercentage}%)</Td>
-                  <Td>{item.total - item.count} ({item.notReadyPercentage}%)</Td>
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </Card>
-      </GridItem>
-      <GridItem colSpan={1}>
-        <Card title="London Client Distribution" w="99%" contentHeight={300}>
-          <ResponsiveContainer>
-            <PieChart>
-              <Pie
-                data={data.distribution}
-                stroke="none"
-                dataKey="count"
-                startAngle={180}
-                endAngle={-180}
-                minAngle={20}
-                outerRadius={100}
-                label={renderLabelContent}
-                isAnimationActive={false}
-              >
-                {
-                  data.distribution.map((entry, index) => (
-                    <Cell
-                      key={`slice-${index}`}
-                      fill={entry.color}
-                    />
-                  ))
-                }
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
-        </Card>
-      </GridItem>
-      
+            ))}
+          </Tbody>
+        </Table>
+      </Card>
+      <Card title="London Client Distribution" w="99%" contentHeight={300}>
+        <ResponsiveContainer>
+          <PieChart>
+            <Pie
+              data={data.distribution}
+              stroke="none"
+              dataKey="count"
+              startAngle={180}
+              endAngle={-180}
+              minAngle={20}
+              outerRadius={100}
+              label={renderLabelContent}
+              isAnimationActive={false}
+            >
+              {
+                data.distribution.map((entry, index) => (
+                  <Cell
+                    key={`slice-${index}`}
+                    fill={entry.color}
+                  />
+                ))
+              }
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+      </Card>
+
       <Card title="London Operating Systems" w="99%" contentHeight={300}>
         <ResponsiveContainer>
           <PieChart>

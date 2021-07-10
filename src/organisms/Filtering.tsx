@@ -164,7 +164,7 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
 
 	return (
     <>
-    <HStack {...props}>
+    <HStack {...props} justifyContent='flex-end'>
       <Button ref={btnRef} leftIcon={<VscFilter />} variant="ghost" onClick={onOpen}>{filterText}</Button>
     </HStack>
     <Drawer

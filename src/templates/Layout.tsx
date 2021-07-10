@@ -1,4 +1,5 @@
 import { VStack } from "@chakra-ui/react";
+import { LayoutEightPadding } from "../config";
 import { Header } from "../organisms/Header";
 
 interface LayoutProps {
@@ -9,7 +10,7 @@ export function Layout(props: LayoutProps) {
   return (
     <VStack minH="100vh" align="flex-start" justify="flex-start">
       <Header />
-      <VStack spacing={8} p={8} width="100%">
+      <VStack spacing={LayoutEightPadding} pl={LayoutEightPadding} pr={LayoutEightPadding} pb={LayoutEightPadding} width="100%">
         {props.children}
       </VStack>
     </VStack>

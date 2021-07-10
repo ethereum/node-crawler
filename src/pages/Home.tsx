@@ -15,7 +15,7 @@ import { appendOtherGroup } from '../data/DataMassager';
 import { Filtering, ParseAndValidateFilters } from '../organisms/Filtering';
 import { TooltipCard } from '../atoms/TooltipCard';
 import { FilterGroup } from '../data/FilterTypes';
-import { knownNodesFilter, knownNodesFilterString } from '../config';
+import { knownNodesFilter, knownNodesFilterString, LayoutEightPadding, LayoutTwoColSpan, LayoutTwoColumn } from '../config';
 
 const colors = scaleOrdinal(schemeCategory10).range();
 
@@ -110,11 +110,11 @@ function Home() {
   };
 
   return (
-    <Grid gridGap="8" templateColumns="repeat(2, 1fr)" w="100%">
-      <GridItem colSpan={2}>
+    <Grid gridGap={LayoutEightPadding} templateColumns={LayoutTwoColumn} w="100%">
+      <GridItem colSpan={LayoutTwoColSpan}>
         <Filtering filters={filters} />
       </GridItem>
-      <GridItem colSpan={2}>
+      <GridItem colSpan={LayoutTwoColSpan}>
         <Card title="Popular Clients" w="99%" contentHeight={data.clients.length * 40}>
           <ResponsiveContainer>
             <BarChart

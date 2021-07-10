@@ -1,4 +1,8 @@
+import { scaleOrdinal } from "d3-scale";
+import { schemeCategory10 } from "d3-scale-chromatic";
 import { FilterGroup, generateQueryStringFromFilterGroups } from "./data/FilterTypes";
+
+export const colors = scaleOrdinal(schemeCategory10).range();
 
 export const normalizeClientNames: { [key: string]: string } = {
   'turbogeth': 'erigon',
@@ -29,3 +33,8 @@ export const londonFilter: FilterGroup[] = [
 
 export const londonFilterString = generateQueryStringFromFilterGroups(londonFilter)
 export const knownNodesFilterString = generateQueryStringFromFilterGroups(knownNodesFilter)
+
+
+export const LayoutEightPadding = [4, 4, 8]
+export const LayoutTwoColumn = ["repeat(1, 1fr)", "repeat(1, 1fr)", "repeat(2, 1fr)"]
+export const LayoutTwoColSpan = [1, 1, 2]

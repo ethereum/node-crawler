@@ -12,6 +12,7 @@ import { Card } from '../atoms/Card';
 import { useParams } from 'react-router-dom';
 import { Loader } from '../organisms/Loader';
 import { appendOtherGroup } from '../data/DataMassager';
+import { LayoutEightPadding, LayoutTwoColSpan, LayoutTwoColumn } from '../config';
 
 const colors = scaleOrdinal(schemeCategory10).range();
 
@@ -77,9 +78,9 @@ function Home() {
   };
 
   return (
-    <Grid gridGap="8" templateColumns="repeat(2, 1fr)" w="100%">
+    <Grid gridGap={LayoutEightPadding} templateColumns={LayoutTwoColumn} w="100%">
       <Heading>{id}</Heading>
-      <GridItem colSpan={2}>
+      <GridItem colSpan={LayoutTwoColSpan}>
         <Card title="Top Versions" w="99%" contentHeight={data.versions.length * 40}>
           <ResponsiveContainer>
             <BarChart
