@@ -49,7 +49,8 @@ const EditableInput: React.FC<EditableProps> = forwardRef<EditableProps, 'div'>(
           <option value="date">Version (date)</option>
           <option value="os">Operating System</option>
           <option value="architecture">Architecture</option>
-          <option value="language">Language Runtime</option>
+          <option value="language_name">Runtime Name</option>
+          <option value="language_version">Runtime Version</option>
         </Select>
         <Select size="xs" value={editItem.operator} onChange={(e) => setEditItem(item => ({...item, operator: e.target.value as FilterOperator}))}>
           <option value="eq">=</option>
