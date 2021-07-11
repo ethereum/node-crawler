@@ -7,12 +7,15 @@ import {
 import { scaleOrdinal } from 'd3-scale';
 import { schemeCategory10 } from 'd3-scale-chromatic';
 
-import { Grid, GridItem, Heading, useColorModeValue } from '@chakra-ui/react';
+import { filter, Grid, GridItem, Heading, useColorModeValue } from '@chakra-ui/react';
 import { Card } from '../atoms/Card';
-import { useParams } from 'react-router-dom';
+import { useHistory, useLocation, useParams } from 'react-router-dom';
 import { Loader } from '../organisms/Loader';
 import { appendOtherGroup } from '../data/DataMassager';
 import { LayoutEightPadding, LayoutTwoColSpan, LayoutTwoColumn } from '../config';
+import { Filtering } from '../organisms/Filtering';
+import { countTotalClientsInFilter, FilterGroup, generateFilterGroupsFromQueryString, generateQueryStringFromFilterGroups } from '../data/FilterTypes';
+import { useCallback } from 'react';
 
 const colors = scaleOrdinal(schemeCategory10).range();
 
@@ -30,19 +33,42 @@ interface ClientData {
   languagesUnknown: number;
 }
 
-function Home() {
+function Client() {
+  const history = useHistory();
+  const location = useLocation();
   const { id } = useParams<{ id: string }>();
   const color = useColorModeValue("gray.800", "white")
   const [data, setData] = useState<ClientData | undefined>()
+  const [filters, setFilters] = useState<FilterGroup[]>()
 
   useEffect(() => {
-    const run = async () => {
-      const url = new URL(window.location.protocol + window.location.host + '/v1/dashboard')
-      const params = {
-        "filter": `[["name:${id}"]]`
+    if (!id) {
+      return;
+    }
+
+    let searchFilters: FilterGroup[] = []
+    if (location.search) {
+      try {
+        searchFilters = generateFilterGroupsFromQueryString(location.search);
+      } catch (e) {
+        console.error(e);
       }
-      url.search = new URLSearchParams(params).toString();
-      const response = await fetch(url.toString())
+    } else {
+      searchFilters = [
+        [{name: 'name', value: id}]
+      ]
+    }
+    
+    setFilters(searchFilters)
+  }, [id])
+
+  useEffect(() => {
+    if (!filters) {
+      return;
+    }
+
+    const run = async () => {
+      const response = await fetch(`/v1/dashboard${generateQueryStringFromFilterGroups(filters)}`)
       const json: ClientData = await response.json();
 
       const [versions, unknownVersionsCount] = appendOtherGroup(json.versions)
@@ -61,7 +87,12 @@ function Home() {
 
     run()
 
-  }, [id])
+  }, [filters])
+
+  const onFiltersChanged = useCallback((filters: FilterGroup[]) => {
+    const nameCount = countTotalClientsInFilter(filters)
+    history.push((nameCount === 1 && filters.length === 1 ? location.pathname : '/') + generateQueryStringFromFilterGroups(filters))
+  }, [history, location]);
 
   if (!data) {
     return <Loader>Processing {id} data</Loader>
@@ -80,6 +111,9 @@ function Home() {
   return (
     <Grid gridGap={LayoutEightPadding} templateColumns={LayoutTwoColumn} w="100%">
       <Heading>{id}</Heading>
+      <GridItem colSpan={LayoutTwoColSpan}>
+        <Filtering filters={filters} onFiltersChange={onFiltersChanged} />
+      </GridItem>
       <GridItem colSpan={LayoutTwoColSpan}>
         <Card title="Top Versions" w="99%" contentHeight={data.versions.length * 40}>
           <ResponsiveContainer>
@@ -161,4 +195,4 @@ function Home() {
   );
 }
 
-export default Home;
+export default Client;

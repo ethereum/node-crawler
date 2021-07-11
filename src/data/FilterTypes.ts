@@ -66,3 +66,14 @@ export function generateFilterGroupsFromQueryString(queryString: string): Filter
     throw Error(`Cannot parse filters: '${rawFilters}'. Reason: ${e}`)
   }
 }
+
+export function countTotalClientsInFilter(filters: FilterGroup[]) {
+  return filters.reduce((groupCount, filterGroup) => {
+    return groupCount + filterGroup.reduce((filterCount, filter) => {
+      if (filter && filter.name === 'name') {
+        filterCount++;
+      }
+      return filterCount;
+    }, 0);
+  }, 0);
+}
