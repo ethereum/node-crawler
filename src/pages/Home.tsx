@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   PieChart, Pie, Cell, Tooltip, 
   LabelList, Bar, BarChart, XAxis, YAxis, ResponsiveContainer
@@ -81,6 +81,10 @@ function Home() {
     run()
   }, [filters])
 
+  const onFiltersChanged = useCallback((filters: FilterGroup[]) => {
+    history.push(location.pathname + generateQueryStringFromFilterGroups(filters))
+  }, [history, location])
+
   if (!data) {
     return <Loader>Processing data</Loader>
   }
@@ -115,7 +119,7 @@ function Home() {
   return (
     <Grid gridGap={LayoutEightPadding} templateColumns={LayoutTwoColumn} w="100%">
       <GridItem colSpan={LayoutTwoColSpan}>
-        <Filtering filters={filters} onFiltersChange={setFilters} />
+        <Filtering filters={filters} onFiltersChange={onFiltersChanged} />
       </GridItem>
       <GridItem colSpan={LayoutTwoColSpan}>
         <Card title="Popular Clients" w="99%" contentHeight={data.clients.length * 40}>
