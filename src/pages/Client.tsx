@@ -7,7 +7,7 @@ import {
 import { scaleOrdinal } from 'd3-scale';
 import { schemeCategory10 } from 'd3-scale-chromatic';
 
-import { filter, Grid, GridItem, Heading, useColorModeValue } from '@chakra-ui/react';
+import { Grid, GridItem, Heading, useColorModeValue } from '@chakra-ui/react';
 import { Card } from '../atoms/Card';
 import { useHistory, useLocation, useParams } from 'react-router-dom';
 import { Loader } from '../organisms/Loader';
@@ -60,7 +60,7 @@ function Client() {
     }
     
     setFilters(searchFilters)
-  }, [id])
+  }, [id, location])
 
   useEffect(() => {
     if (!filters) {
