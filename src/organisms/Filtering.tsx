@@ -1,9 +1,9 @@
-import { Box, BoxProps, Button, Drawer, DrawerBody, DrawerCloseButton, DrawerContent, DrawerFooter, DrawerHeader, DrawerOverlay, forwardRef, HStack, Icon, Input, Select, StackProps, Text, useColorModeValue, useDisclosure, VStack } from "@chakra-ui/react"
-import React, { useRef } from "react";
+import { Box, BoxProps, Button, Drawer, DrawerBody, DrawerCloseButton, DrawerContent, DrawerFooter, DrawerHeader, DrawerOverlay, forwardRef, HStack, Input, Select, StackProps, Text, useColorModeValue, useDisclosure, VStack } from "@chakra-ui/react"
+import React, { useCallback, useRef } from "react";
 import { useState } from "react";
 import { useEffect } from "react";
-import { VscClose, VscFilter } from "react-icons/vsc"
-import { Filter, FilterGroup, FilterOperatorToSymbol, FilterItem } from "../data/FilterTypes";
+import { VscCheck, VscClose, VscFilter } from "react-icons/vsc"
+import { Filter, FilterGroup, FilterOperatorToSymbol, FilterItem, FilterOperator } from "../data/FilterTypes";
 
 export const ParseAndValidateFilters = (locationSearch: string): FilterGroup[] => {
   const rawFilters = new URLSearchParams(locationSearch).get('filter')
@@ -50,22 +50,26 @@ interface EditableProps extends StackProps  {
   item: FilterItem
   showRemoveButton?: boolean
   onRemoveClicked: () => void
+  onSaveClicked: (item: FilterItem) => void
 }
 
 const EditableInput: React.FC<EditableProps> = forwardRef<EditableProps, 'div'>((props: EditableProps, ref: React.ForwardedRef<any>) => {
-  const [editMode, setEditMode] = useState(props.item === undefined)
+  const [name, setName] = useState(props.item?.name || 'name')
+  const [operator, setOperator] = useState(props.item?.operator || 'eq')
+  const [value, setValue] = useState(props.item?.value || '')
+
   const {
     item,
     showRemoveButton,
     onRemoveClicked,
+    onSaveClicked,
     ...rest
   } = props
 
-
-  if (editMode || !item) {
+  if (props.item === undefined || !item) {
     return (
-      <HStack borderWidth="thin" borderStyle="dashed" rounded="lg" p="2" {...rest}>
-        <Select placeholder="Select key" defaultValue="name" size="xs">
+      <VStack borderWidth="thick" borderStyle="dashed" rounded="lg" p="2" {...rest}>
+        <Select size="xs" value={name} onChange={(e) => setName(e.target.value)}>
           <option value="name">Client Name</option>
           <option value="major">Version (major)</option>
           <option value="minor">Version (minor)</option>
@@ -77,7 +81,7 @@ const EditableInput: React.FC<EditableProps> = forwardRef<EditableProps, 'div'>(
           <option value="architecture">Architecture</option>
           <option value="language">Language Runtime</option>
         </Select>
-        <Select defaultValue="eq" size="xs">
+        <Select size="xs" value={operator} onChange={(e) => setOperator(e.target.value as FilterOperator)}>
           <option value="eq">=</option>
           <option value="lt">&lt;</option>
           <option value="lte">&lt;=</option>
@@ -85,9 +89,12 @@ const EditableInput: React.FC<EditableProps> = forwardRef<EditableProps, 'div'>(
           <option value="gte">&gt;=</option>
           <option value="not">!=</option>
         </Select>
-        <Input size="xs" />
-        {showRemoveButton && (<Icon as={VscClose} _hover={{color: "black"}} cursor="pointer" onClick={() => onRemoveClicked()}/>)}
-      </HStack>
+        <Input size="xs" value={value} onChange={(e) => setValue(e.target.value)} />
+        <HStack>
+          <Button variant="ghost" iconSpacing={0} size="sm" leftIcon={<VscCheck />} title="Save condition" onClick={() => onSaveClicked({name, operator, value})}/>
+          {showRemoveButton && (<Button variant="ghost" iconSpacing={0} size="sm" leftIcon={<VscClose />} title="Remove condition" onClick={() => onRemoveClicked()}/>)}
+        </HStack>
+      </VStack>
     )
   }
 
@@ -96,7 +103,7 @@ const EditableInput: React.FC<EditableProps> = forwardRef<EditableProps, 'div'>(
       <Text fontWeight="bold">{item.name}</Text>
       {item.operator && (<Text>{FilterOperatorToSymbol[item.operator]}</Text>)}
       <Text>{item.value}</Text>
-      {onRemoveClicked && (<Icon as={VscClose} _hover={{color: "black"}} cursor="pointer" onClick={() => onRemoveClicked()}/>)}
+      {onRemoveClicked && (<Button variant="ghost" iconSpacing={0} size="sm" leftIcon={<VscClose />} title="Remove condition" onClick={() => onRemoveClicked()}/>)}
     </HStack>
   )
 })
@@ -112,7 +119,7 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
 
   const [modifyState, setModifyState] = React.useState(false)
   const [filters, setFilters] = React.useState<FilterGroup[]>(props.filters || [])
-  const [totalFilters, setTotalFilters] = React.useState(0)
+  const [totalFilters, setTotalFilters] = React.useState(props.filters?.length || 0)
 
   useEffect(() => {
     setTotalFilters(filters.reduce((prev, curr) => prev + curr.length, 0) || 0)
@@ -122,7 +129,7 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
     setModifyState(false)
   }
 
-  const removeFilter = (groupIndex: number, filterIndex?: number) => {
+  const removeFilter = useCallback((groupIndex: number, filterIndex?: number) => {
     if (filterIndex === undefined) {
       setFilters(groupFilters => {
         const newGroupFilters = [...groupFilters]
@@ -136,12 +143,17 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
       const newGroupFilters = [...groupFilters]
       const group: FilterGroup = [...groupFilters[groupIndex]]
       group.splice(filterIndex, 1)
-      newGroupFilters[groupIndex] = group
+      
+      if (group.length === 0) {
+        newGroupFilters.splice(groupIndex, 1)
+      } else {
+        newGroupFilters[groupIndex] = group
+      }
       return newGroupFilters
     })
-  }
+  }, [])
 
-  const addFilter = (groupIndex?: number) => {
+  const addFilter = useCallback((groupIndex?: number) => {
     if (groupIndex === undefined) {
       setFilters(groupFilters => {
         const newGroupFilters = [...groupFilters]
@@ -158,7 +170,11 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
       newGroupFilters[groupIndex] = group 
       return newGroupFilters
     })
-  }
+  }, [])
+
+  const saveFilter = useCallback((filter: FilterItem, groupIndex?: number, filterIndex?: number) => {
+    console.log("saveFilter", filter, groupIndex, filterIndex)
+  }, [])
 
   const filterText = totalFilters > 0 ? `${totalFilters} filters applied` : "Apply filter"
 
@@ -188,7 +204,13 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
                     <VStack borderWidth="medium" borderStyle="dashed" borderColor={color} rounded="lg" p="4">
                       {filterGroup.map((filter: FilterItem, filterIndex: number) => (
                         <Box key={filterIndex}>
-                          <EditableInput borderColor={color} item={filter} onRemoveClicked={() => removeFilter(groupIndex, filterIndex)} showRemoveButton={filterGroup.length > 1} />
+                          <EditableInput 
+                              borderColor={color}
+                              item={filter}
+                              onRemoveClicked={() => removeFilter(groupIndex, filterIndex)}
+                              onSaveClicked={(item: FilterItem) => saveFilter(item, groupIndex, filterIndex)} 
+                              showRemoveButton={filterGroup.length > 1} 
+                          />
                           {filterIndex < filterGroup.length - 1 && <Text fontSize="14px">and</Text>}
                         </Box>
                       ))}

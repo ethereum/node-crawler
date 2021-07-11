@@ -1,4 +1,4 @@
-import { Box, Flex, Grid, HStack, Link, Text} from "@chakra-ui/react";
+import { Flex, Grid, HStack, Link, Text} from "@chakra-ui/react";
 import { Link as ReactLink } from "react-router-dom"
 import { Logo } from "../atoms/Logo";
 import { LayoutEightPadding } from "../config";
