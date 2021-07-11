@@ -37,6 +37,12 @@ const EditableInput: React.FC<EditableProps> = forwardRef<EditableProps, 'div'>(
   }, [item])
   
   if (editing) {
+
+    const onSaveClick = () => {
+      setEditing(false)
+      onSaveClicked(editItem)
+    }
+
     return (
       <VStack borderWidth="thick" borderStyle="dashed" rounded="lg" p="2" ref={ref} {...rest}>
         <Select size="xs" value={editItem.name} onChange={(e) => setEditItem(item => ({...item, name: e.target.value}))}>
@@ -62,7 +68,7 @@ const EditableInput: React.FC<EditableProps> = forwardRef<EditableProps, 'div'>(
         </Select>
         <Input size="xs" value={editItem.value} onChange={(e) => setEditItem(item => ({...item, value: e.target.value}))} />
         <HStack>
-          <Button variant="ghost" iconSpacing={0} size="sm" leftIcon={<VscCheck />} title="Save condition" onClick={() => onSaveClicked(editItem)} />
+          <Button variant="ghost" isDisabled={editItem.value === ''} iconSpacing={0} size="sm" leftIcon={<VscCheck />} title="Save condition" onClick={onSaveClick} />
           {showRemoveButton && (<Button variant="ghost" iconSpacing={0} size="sm" leftIcon={<VscClose />} title="Remove condition" onClick={() => onRemoveClicked && onRemoveClicked()} />)}
         </HStack>
       </VStack>
@@ -70,7 +76,7 @@ const EditableInput: React.FC<EditableProps> = forwardRef<EditableProps, 'div'>(
   }
 
   return (
-    <HStack borderWidth="thin" borderStyle="dashed" rounded="lg" p="2" ref={ref} {...rest}>
+    <HStack borderWidth="thin" borderStyle="dashed" rounded="lg" p="2" ref={ref} {...rest} onClick={() => setEditing(true)}>
       <Text fontWeight="bold">{editItem.name}</Text>
       {editItem.operator && (<Text>{FilterOperatorToSymbol[editItem.operator]}</Text>)}
       <Text>{editItem.value}</Text>
