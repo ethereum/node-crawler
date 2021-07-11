@@ -1,4 +1,4 @@
-import { Box, BoxProps, Button, Drawer, DrawerBody, DrawerCloseButton, DrawerContent, DrawerFooter, DrawerHeader, DrawerOverlay, forwardRef, HStack, Input, Select, StackProps, Text, useColorModeValue, useDisclosure, VStack } from "@chakra-ui/react"
+import { Badge, Box, BoxProps, Button, Drawer, DrawerBody, DrawerCloseButton, DrawerContent, DrawerFooter, DrawerHeader, DrawerOverlay, forwardRef, HStack, Input, Select, StackProps, Text, useColorModeValue, useDisclosure, VStack } from "@chakra-ui/react"
 import React, { useCallback, useRef } from "react";
 import { useState } from "react";
 import { useEffect } from "react";
@@ -9,7 +9,7 @@ interface EditableProps extends StackProps {
   item: FilterItem
   editMode?: boolean
   showRemoveButton?: boolean
-  onRemoveClicked: () => void
+  onRemoveClicked?: () => void
   onSaveClicked: (item: FilterItem) => void
 }
 
@@ -58,7 +58,7 @@ const EditableInput: React.FC<EditableProps> = forwardRef<EditableProps, 'div'>(
         <Input size="xs" value={editItem.value} onChange={(e) => setEditItem(item => ({...item, value: e.target.value}))} />
         <HStack>
           <Button variant="ghost" iconSpacing={0} size="sm" leftIcon={<VscCheck />} title="Save condition" onClick={() => onSaveClicked(editItem)} />
-          {showRemoveButton && (<Button variant="ghost" iconSpacing={0} size="sm" leftIcon={<VscClose />} title="Remove condition" onClick={() => onRemoveClicked()} />)}
+          {showRemoveButton && (<Button variant="ghost" iconSpacing={0} size="sm" leftIcon={<VscClose />} title="Remove condition" onClick={() => onRemoveClicked && onRemoveClicked()} />)}
         </HStack>
       </VStack>
     )
@@ -76,26 +76,40 @@ const EditableInput: React.FC<EditableProps> = forwardRef<EditableProps, 'div'>(
 
 interface FilteringProps extends BoxProps {
   filters?: FilterGroup[]
+  onFiltersChange?: (filters: FilterGroup[]) => void
 }
 
 export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'div'>((props: FilteringProps, ref: React.ForwardedRef<any>) => {
+  const {
+    filters,
+    onFiltersChange,
+    ...rest
+  } = props
+
   const color = useColorModeValue("teal.100", "teal.700")
   const { isOpen, onOpen, onClose } = useDisclosure()
   const btnRef: React.RefObject<any> = useRef()
 
-  const [filters, setFilters] = React.useState<FilterGroup[]>(props.filters || [])
-  const [totalFilters, setTotalFilters] = React.useState(props.filters?.length || 0)
+  const [editFilters, setEditFilters] = React.useState<FilterGroup[]>(filters || [])
+  const [totalFilters, setTotalFilters] = React.useState(filters?.length || 0)
 
   useEffect(() => {
-    setTotalFilters(filters.reduce((prev, curr) => prev + curr.length, 0) || 0)
-  }, [filters])
+    setTotalFilters(editFilters.reduce((prev, curr) => prev + curr.length, 0) || 0)
+  }, [editFilters])
 
   const onApply = () => {
+    onFiltersChange && onFiltersChange(editFilters.filter(f => f !== undefined))
+    onClose()
+  }
+
+  const onCancel = () => {
+    setEditFilters(filters || [])
+    onClose()
   }
 
   const removeFilter = useCallback((groupIndex: number, filterIndex?: number) => {
     if (filterIndex === undefined) {
-      setFilters(groupFilters => {
+      setEditFilters(groupFilters => {
         const newGroupFilters = [...groupFilters]
         newGroupFilters.splice(groupIndex, 1)
         return newGroupFilters
@@ -103,7 +117,7 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
       return
     }
 
-    setFilters(groupFilters => {
+    setEditFilters(groupFilters => {
       const newGroupFilters = [...groupFilters]
       const group: FilterGroup = [...groupFilters[groupIndex]]
       group.splice(filterIndex, 1)
@@ -119,7 +133,7 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
 
   const addFilter = useCallback((groupIndex?: number) => {
     if (groupIndex === undefined) {
-      setFilters(groupFilters => {
+      setEditFilters(groupFilters => {
         const newGroupFilters = [...groupFilters]
         newGroupFilters.push([undefined])
         return newGroupFilters
@@ -127,7 +141,7 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
       return
     }
 
-    setFilters(groupFilters => {
+    setEditFilters(groupFilters => {
       const newGroupFilters = [...groupFilters]
       const group: FilterGroup = [...groupFilters[groupIndex]]
       group.push(undefined)
@@ -144,7 +158,7 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
 
   return (
     <>
-      <HStack {...props} justifyContent='flex-end'>
+      <HStack {...rest} justifyContent='flex-end' ref={ref}>
         <Button ref={btnRef} leftIcon={<VscFilter />} variant="ghost" onClick={onOpen}>{filterText}</Button>
       </HStack>
       <Drawer
@@ -156,9 +170,9 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
         <DrawerOverlay />
         <DrawerContent>
           <DrawerCloseButton />
-          <DrawerHeader>Filters</DrawerHeader>
+          <DrawerHeader>Filters {!onFiltersChange && (<Badge ml={4} fontSize="0.5em">read-only</Badge>)}</DrawerHeader>
           <DrawerBody textAlign="center">
-            {filters.length > 0 && filters.map((filterGroup: FilterGroup, groupIndex: number) => (
+            {editFilters.length > 0 && editFilters.map((filterGroup: FilterGroup, groupIndex: number) => (
               <Box key={groupIndex}>
                 <VStack borderWidth="medium" borderStyle="dashed" borderColor={color} rounded="lg" p="4">
                   {filterGroup.map((filter: FilterItem, filterIndex: number) => (
@@ -166,30 +180,36 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
                       <EditableInput
                         borderColor={color}
                         item={filter}
-                        onRemoveClicked={() => removeFilter(groupIndex, filterIndex)}
+                        onRemoveClicked={onFiltersChange &&  (() => removeFilter(groupIndex, filterIndex))}
                         onSaveClicked={(item: FilterItem) => saveFilter(item, groupIndex, filterIndex)}
                         showRemoveButton={filterGroup.length > 1}
                       />
                       {filterIndex < filterGroup.length - 1 && <Text fontSize="14px">and</Text>}
                     </Box>
                   ))}
-                  <HStack>
-                    <Button colorScheme="teal" size="xs" variant="ghost" onClick={() => removeFilter(groupIndex)}>Remove filter</Button>
-                    <Button colorScheme="teal" size="xs" variant="ghost" onClick={() => addFilter(groupIndex)}>Add condition</Button>
-                  </HStack>
+                  {onFiltersChange && (
+                    <HStack>
+                      <Button colorScheme="teal" size="xs" variant="ghost" onClick={() => removeFilter(groupIndex)}>Remove filter</Button>
+                      <Button colorScheme="teal" size="xs" variant="ghost" onClick={() => addFilter(groupIndex)}>Add condition</Button>
+                    </HStack>
+                  )}
                 </VStack>
-                {groupIndex < filters.length - 1 && <Text fontSize="14px" m="4">or</Text>}
+                {groupIndex < editFilters.length - 1 && <Text fontSize="14px" m="4">or</Text>}
               </Box>
             ))}
-            <Button mt="4" colorScheme="teal" size="xs" variant="ghost" onClick={() => addFilter()}>Add filter</Button>
+            {onFiltersChange && (
+              <Button mt="4" colorScheme="teal" size="xs" variant="ghost" onClick={() => addFilter()}>Add filter</Button>
+            )}
           </DrawerBody>
-          <DrawerFooter>
-            <Button variant="outline" mr={3} colorScheme="teal" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button colorScheme="teal" onClick={onApply}>Apply</Button>
-          </DrawerFooter>
-        </DrawerContent>
+          {onFiltersChange && (
+            <DrawerFooter>
+              <Button variant="outline" mr={3} colorScheme="teal" onClick={onCancel}>
+                Cancel
+              </Button>
+              <Button colorScheme="teal" onClick={onApply}>Apply</Button>
+            </DrawerFooter>
+          )}
+          </DrawerContent>
       </Drawer>
     </>
   )

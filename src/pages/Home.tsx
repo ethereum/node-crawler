@@ -14,8 +14,8 @@ import { Loader } from '../organisms/Loader';
 import { appendOtherGroup } from '../data/DataMassager';
 import { Filtering } from '../organisms/Filtering';
 import { TooltipCard } from '../atoms/TooltipCard';
-import { FilterGroup, generateFilterGroupsFromQueryString } from '../data/FilterTypes';
-import { knownNodesFilter, knownNodesFilterString, LayoutEightPadding, LayoutTwoColSpan, LayoutTwoColumn } from '../config';
+import { FilterGroup, generateFilterGroupsFromQueryString, generateQueryStringFromFilterGroups } from '../data/FilterTypes';
+import { knownNodesFilter, LayoutEightPadding, LayoutTwoColSpan, LayoutTwoColumn } from '../config';
 
 const colors = scaleOrdinal(schemeCategory10).range();
 
@@ -38,27 +38,30 @@ function Home() {
   const history = useHistory()
   const color = useColorModeValue("gray.800", "gray")
   const [data, setData] = useState<ClientData>()
-  const [filters, setFilters] = useState<FilterGroup[]>([])
+  const [filters, setFilters] = useState<FilterGroup[]>()
 
   useEffect(() => {
-    const run = async () => {
-      let search = ''
-      let searchFilters: FilterGroup[] = []
-      if (location.search) {
-        search = location.search
-        try {
-          searchFilters = generateFilterGroupsFromQueryString(search);
-        } catch (e) {
-          console.error(e);
-        }
-      } else {
-        search = knownNodesFilterString
-        searchFilters = knownNodesFilter
+    let searchFilters: FilterGroup[] = []
+    if (location.search) {
+      try {
+        searchFilters = generateFilterGroupsFromQueryString(location.search);
+      } catch (e) {
+        console.error(e);
       }
+    } else {
+      searchFilters = knownNodesFilter
+    }
 
-      setFilters(searchFilters)
+    setFilters(searchFilters)
+  }, [location.search])
 
-      const response = await fetch(`/v1/dashboard${search}`)
+  useEffect(() => {
+    if (!filters) {
+      return;
+    }
+
+    const run = async () => {
+      const response = await fetch(`/v1/dashboard${generateQueryStringFromFilterGroups(filters)}`)
       const json: ClientData = await response.json()
 
       const [clients, unknownClientCount] = appendOtherGroup(json.clients)
@@ -76,7 +79,7 @@ function Home() {
     }
 
     run()
-  }, [location.search])
+  }, [filters])
 
   if (!data) {
     return <Loader>Processing data</Loader>
@@ -112,7 +115,7 @@ function Home() {
   return (
     <Grid gridGap={LayoutEightPadding} templateColumns={LayoutTwoColumn} w="100%">
       <GridItem colSpan={LayoutTwoColSpan}>
-        <Filtering filters={filters} />
+        <Filtering filters={filters} onFiltersChange={setFilters} />
       </GridItem>
       <GridItem colSpan={LayoutTwoColSpan}>
         <Card title="Popular Clients" w="99%" contentHeight={data.clients.length * 40}>
