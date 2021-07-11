@@ -24,7 +24,11 @@ const EditableInput: React.FC<EditableProps> = forwardRef<EditableProps, 'div'>(
   } = props
 
   const [editItem, setEditItem] = useState<Filter>(item || { name: 'name', 'operator': 'eq', value: '' })
-  const [editing, setEditing] = useState(editMode || item === undefined || !item)
+  const [editing, setEditing] = useState(editMode)
+
+  useEffect(() => {
+    setEditing(editMode)
+  }, [editMode]);
 
   useEffect(() => {
     if (item) {
@@ -150,8 +154,16 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
     })
   }, [])
 
-  const saveFilter = useCallback((filter: FilterItem, groupIndex?: number, filterIndex?: number) => {
-    console.log("saveFilter", filter, groupIndex, filterIndex)
+  const saveFilter = useCallback((groupIndex: number, filterIndex: number, savedFilter: FilterItem) => {
+    if (!savedFilter || savedFilter.value === "") {
+      return;
+    }
+
+    setEditFilters(groupFilters => {
+      const newGroupFilters = [...groupFilters]
+      newGroupFilters[groupIndex][filterIndex] = savedFilter
+      return newGroupFilters
+    })
   }, [])
 
   const filterText = totalFilters > 0 ? `${totalFilters} filters applied` : "Apply filter"
@@ -180,8 +192,9 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
                       <EditableInput
                         borderColor={color}
                         item={filter}
+                        editMode={filter === undefined}
                         onRemoveClicked={onFiltersChange &&  (() => removeFilter(groupIndex, filterIndex))}
-                        onSaveClicked={(item: FilterItem) => saveFilter(item, groupIndex, filterIndex)}
+                        onSaveClicked={(item: FilterItem) => saveFilter(groupIndex, filterIndex, item)}
                         showRemoveButton={filterGroup.length > 1}
                       />
                       {filterIndex < filterGroup.length - 1 && <Text fontSize="14px">and</Text>}
