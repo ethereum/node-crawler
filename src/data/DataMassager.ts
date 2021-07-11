@@ -3,8 +3,12 @@ interface NamedCount {
 	count: number;
 }
 
-export function appendOtherGroup(list: NamedCount[]): [NamedCount[], number] {
+export function appendOtherGroup(list: NamedCount[] | undefined): [NamedCount[], number] {
   let unknownItemCount = 0
+
+  if (!list) {
+    return [[], unknownItemCount];
+  }
   
   const otherItem: NamedCount = {
     name: 'Other',
