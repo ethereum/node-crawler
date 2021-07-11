@@ -5,47 +5,6 @@ import { useEffect } from "react";
 import { VscCheck, VscClose, VscFilter } from "react-icons/vsc"
 import { Filter, FilterGroup, FilterOperatorToSymbol, FilterItem, FilterOperator } from "../data/FilterTypes";
 
-export const ParseAndValidateFilters = (locationSearch: string): FilterGroup[] => {
-  const rawFilters = new URLSearchParams(locationSearch).get('filter')
-  if (!rawFilters) {
-    return []
-  }
-
-  try {
-    const parsedFilters: [string[]] = JSON.parse(rawFilters)
-    if (!Array.isArray(parsedFilters)) {
-      throw Error(`Invalid filters: ${rawFilters}`)
-    }
-
-    const filterGroup: FilterGroup[] = parsedFilters.map((unparsedFilters, idx) => {
-      if (!Array.isArray(unparsedFilters)) {
-        throw Error(`Invalid filter, item "${idx}" should be an array`)
-      }
-
-      return unparsedFilters.map((unparsedFilter, unparsedIdx) => {
-        if (typeof unparsedFilter !== "string") {
-          throw Error(`Invalid filter, item "${idx}" at "${unparsedIdx}" should be an array`)
-        }
-
-        const [name, value, operator] = unparsedFilter.split(":")
-        if (operator && !(operator in FilterOperatorToSymbol)) {
-          throw Error(`Invalid operator, item "${idx}" at "${unparsedIdx}" is invalid: ${operator}`)
-        }
-
-        if (!name && !value) {
-          throw Error(`Invalid key/value, item "${idx}" at "${unparsedIdx}" is missing: ${name} and ${value}`)
-        }
-
-        return { name, value, operator } as Filter
-      })
-    })
-    
-    return filterGroup
-  } catch (e) {
-    throw Error(`Cannot parse filters: '${rawFilters}'. Reason: ${e}`)
-  }
-}
-
 interface EditableProps extends StackProps  {
   item: FilterItem
   showRemoveButton?: boolean

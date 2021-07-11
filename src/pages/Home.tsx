@@ -12,9 +12,9 @@ import { Card } from '../atoms/Card';
 import { useHistory, useLocation } from 'react-router-dom';
 import { Loader } from '../organisms/Loader';
 import { appendOtherGroup } from '../data/DataMassager';
-import { Filtering, ParseAndValidateFilters } from '../organisms/Filtering';
+import { Filtering } from '../organisms/Filtering';
 import { TooltipCard } from '../atoms/TooltipCard';
-import { FilterGroup } from '../data/FilterTypes';
+import { FilterGroup, generateFilterGroupsFromQueryString } from '../data/FilterTypes';
 import { knownNodesFilter, knownNodesFilterString, LayoutEightPadding, LayoutTwoColSpan, LayoutTwoColumn } from '../config';
 
 const colors = scaleOrdinal(schemeCategory10).range();
@@ -47,7 +47,7 @@ function Home() {
       if (location.search) {
         search = location.search
         try {
-          searchFilters = ParseAndValidateFilters(search);
+          searchFilters = generateFilterGroupsFromQueryString(search);
         } catch (e) {
           console.error(e);
         }
