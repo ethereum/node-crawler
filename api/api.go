@@ -242,7 +242,7 @@ func (a *Api) handleLondon(rw http.ResponseWriter, r *http.Request) {
 func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
-	queryHasName := strings.Contains(vars["filter"], "[\"name:")
+	nameCountInQuery := strings.Count(vars["filter"], "\"name:")
 
 	// Where
 	where, whereArgs, err := addFilterArgs(vars)
@@ -256,7 +256,7 @@ func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	var topLanguageQuery string
-	if queryHasName { 
+	if nameCountInQuery == 1 { 
 		topLanguageQuery = fmt.Sprintf("SELECT Name, Count(*) as Count FROM (SELECT language_name || language_version as Name FROM nodes %v) GROUP BY Name ORDER BY Count DESC", where)
 	} else {
 		topLanguageQuery = fmt.Sprintf("SELECT language_name as Name, COUNT(language_name) as Count FROM nodes %v GROUP BY language_name ORDER BY Count DESC", where)
@@ -283,7 +283,7 @@ func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 
 	// When the filter has a name, we don't want to include that in the json response.
 	var versions []client
-	if queryHasName {
+	if nameCountInQuery == 1 {
 		dataVersions, err := clientQuery(a.db, topVersionQuery, whereArgs...)
 		versions = dataVersions
 		if err != nil {
