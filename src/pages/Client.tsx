@@ -116,7 +116,7 @@ function Client() {
       </GridItem>
       <GridItem colSpan={LayoutTwoColSpan}>
         <Card title="Top Versions" w="99%" contentHeight={data.versions.length * 40}>
-          <ResponsiveContainer>
+          <ResponsiveContainer height={data.versions.length * 40}>
             <BarChart
               data={data.versions}
               layout="vertical"
@@ -137,7 +137,7 @@ function Client() {
       </GridItem>
 
       <Card title="Popular Operating Systems" w="99%" contentHeight={300}>
-        <ResponsiveContainer>
+        <ResponsiveContainer height={300}>
           <PieChart>
             <Pie
               data={data.operatingSystems}
@@ -165,7 +165,7 @@ function Client() {
       </Card>
 
       <Card title="Popular Client Runtimes" w="99%" contentHeight={300}>
-        <ResponsiveContainer>
+        <ResponsiveContainer height={300}>
           <PieChart>
             <Pie
               data={data.languages}

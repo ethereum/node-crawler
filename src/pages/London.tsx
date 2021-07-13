@@ -122,7 +122,7 @@ export function London() {
         </Table>
       </Card>
       <Card title="London Client Distribution" w="99%" contentHeight={300}>
-        <ResponsiveContainer>
+        <ResponsiveContainer height={300}>
           <PieChart>
             <Pie
               data={data.distribution}
@@ -149,7 +149,7 @@ export function London() {
       </Card>
 
       <Card title="London Operating Systems" w="99%" contentHeight={300}>
-        <ResponsiveContainer>
+        <ResponsiveContainer height={300}>
           <PieChart>
             <Pie
               data={data.operatingSystems}
@@ -177,7 +177,7 @@ export function London() {
       </Card>
 
       <Card title="London Runtimes" w="99%" contentHeight={300}>
-        <ResponsiveContainer>
+        <ResponsiveContainer height={300}>
           <PieChart>
             <Pie
               data={data.languages}

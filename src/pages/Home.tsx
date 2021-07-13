@@ -123,7 +123,7 @@ function Home() {
       </GridItem>
       <GridItem colSpan={LayoutTwoColSpan}>
         <Card title="Popular Clients" w="99%" contentHeight={data.clients.length * 40}>
-          <ResponsiveContainer>
+          <ResponsiveContainer height={data.clients.length * 40}>
             <BarChart
               data={data.clients}
               layout="vertical"
@@ -145,7 +145,7 @@ function Home() {
       </GridItem>
 
       <Card title="Popular Operating Systems" w="99%" contentHeight={300}>
-        <ResponsiveContainer>
+        <ResponsiveContainer height={300}>
           <PieChart>
             <Pie
               data={data.operatingSystems}
@@ -173,7 +173,7 @@ function Home() {
       </Card>
 
       <Card title="Popular Client Runtimes" w="99%" contentHeight={300}>
-        <ResponsiveContainer>
+        <ResponsiveContainer height={300}>
           <PieChart>
             <Pie
               data={data.languages}
