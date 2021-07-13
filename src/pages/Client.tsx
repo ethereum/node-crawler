@@ -120,7 +120,7 @@ function Client() {
             <BarChart
               data={data.versions}
               layout="vertical"
-              margin={{ left: 60 }}
+              margin={{ left: 60, right: 30 }}
             >
               <XAxis type="number" stroke={color} hide />
               <YAxis dataKey="name" type="category" stroke={color} interval={0} />
