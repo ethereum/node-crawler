@@ -47,12 +47,12 @@ const EditableInput: React.FC<EditableProps> = forwardRef<EditableProps, 'div'>(
       <VStack borderWidth="thick" borderStyle="dashed" rounded="lg" p="2" ref={ref} {...rest}>
         <Select size="xs" value={editItem.name} onChange={(e) => setEditItem(item => ({...item, name: e.target.value}))}>
           <option value="name">Client Name</option>
-          <option value="major">Version (major)</option>
-          <option value="minor">Version (minor)</option>
-          <option value="patch">Version (patch)</option>
-          <option value="tag">Version (tag)</option>
-          <option value="build">Version (build)</option>
-          <option value="date">Version (date)</option>
+          <option value="version_major">Version (major)</option>
+          <option value="version_minor">Version (minor)</option>
+          <option value="version_patch">Version (patch)</option>
+          <option value="version_tag">Version (tag)</option>
+          <option value="version_build">Version (build)</option>
+          <option value="version_date">Version (date)</option>
           <option value="os">Operating System</option>
           <option value="architecture">Architecture</option>
           <option value="language_name">Runtime Name</option>
