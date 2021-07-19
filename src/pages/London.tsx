@@ -157,9 +157,9 @@ export function London() {
               startAngle={180}
               endAngle={-180}
               innerRadius={30}
-              minAngle={20}
               outerRadius={100}
-              paddingAngle={10}
+              paddingAngle={data.operatingSystems.length === 1 ? 0 : 10}
+              minAngle={data.operatingSystems.length === 1 ? 0 : 20}
               label={renderLabelContent}
               isAnimationActive={false}
             >
@@ -186,8 +186,8 @@ export function London() {
               endAngle={-180}
               innerRadius={30}
               outerRadius={100}
-              paddingAngle={20}
-              minAngle={20}
+              paddingAngle={data.languages.length === 1 ? 0 : 10}
+              minAngle={data.languages.length === 1 ? 0 : 20}
               label={renderLabelContent}
               isAnimationActive={false}
             >
