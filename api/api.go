@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/MariusVanDerWijden/node-crawler-backend/parser"
 	"github.com/gorilla/mux"
 )
 
@@ -45,11 +44,6 @@ func (a *Api) HandleRequests(wg *sync.WaitGroup) {
 type client struct {
 	Name  string `json:"name"`
 	Count int    `json:"count"`
-}
-
-type node struct {
-	ID string
-	parser.ParsedInfo
 }
 
 func (a *Api) handleFilter(rw http.ResponseWriter, r *http.Request) {
@@ -263,8 +257,8 @@ func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 	}
 	
 	topClientsQuery := fmt.Sprintf("SELECT name as Name, COUNT(name) as Count FROM nodes %v GROUP BY name ORDER BY count DESC", where)
-	topOsQuery := fmt.Sprintf("SELECT os as Name, COUNT(os) as Count FROM nodes %v GROUP BY os ORDER BY count DESC", where)
-	topVersionQuery := fmt.Sprintf("SELECT Name, Count(*) as Count FROM (SELECT major || '.' || minor || '.' || patch as Name FROM nodes %v) GROUP BY Name ORDER BY Count DESC ", where)
+	topOsQuery := fmt.Sprintf("SELECT os_name as Name, COUNT(os_name) as Count FROM nodes %v GROUP BY os_name ORDER BY count DESC", where)
+	topVersionQuery := fmt.Sprintf("SELECT Name, Count(*) as Count FROM (SELECT version_major || '.' || version_minor || '.' || version_patch as Name FROM nodes %v) GROUP BY Name ORDER BY Count DESC ", where)
 
 	clients, err := clientQuery(a.db, topClientsQuery, whereArgs...)
 	if err != nil {
@@ -386,9 +380,9 @@ func createLondonQuery() (string, []interface{}) {
 	query := "("
 	type cl struct {
 		name  string
-		major int
-		minor int
-		patch int
+		version_major int
+		version_minor int
+		version_patch int
 	}
 	// Testnets: https://blog.ethereum.org/2021/06/18/london-testnets-announcement/
 	clients := []cl{
@@ -407,16 +401,16 @@ func createLondonQuery() (string, []interface{}) {
 		name := fmt.Sprintf("name == \"%v\"", cl.name)
 		//name := "name = ?"
 		//values = append(values, cl.name)
-		major := "major > ?"
-		values = append(values, cl.major)
-		minor := "major == ? AND minor > ?"
-		values = append(values, cl.major)
-		values = append(values, cl.minor)
-		patch := "major == ? AND minor == ? AND patch >= ?"
-		values = append(values, cl.major)
-		values = append(values, cl.minor)
-		values = append(values, cl.patch)
-		inner := fmt.Sprintf("(%v) OR (%v) OR (%v)", major, minor, patch)
+		version_major := "version_major > ?"
+		values = append(values, cl.version_major)
+		version_minor := "version_major == ? AND version_minor > ?"
+		values = append(values, cl.version_major)
+		values = append(values, cl.version_minor)
+		version_patch := "version_major == ? AND version_minor == ? AND version_patch >= ?"
+		values = append(values, cl.version_major)
+		values = append(values, cl.version_minor)
+		values = append(values, cl.version_patch)
+		inner := fmt.Sprintf("(%v) OR (%v) OR (%v)", version_major, version_minor, version_patch)
 		query += fmt.Sprintf("( %v AND (%v))", name, inner)
 		if i < len(clients)-1 {
 			query += " OR "
@@ -430,16 +424,16 @@ func validateKey(key string) bool {
 	validKeys := map[string]struct{}{
 		"id":                 {},
 		"name":               {},
-		"major":              {},
-		"minor":              {},
-		"patch":              {},
-		"tag":                {},
-		"build":              {},
-		"date":               {},
-		"os":                 {},
-		"architecture":       {},
+		"version_major":      {},
+		"version_minor":      {},
+		"version_patch":      {},
+		"version_tag":        {},
+		"version_build":      {},
+		"version_date":       {},
+		"os_name":            {},
+		"os_architecture":       {},
 		"language_name":      {},
-		"language_version":     {},
+		"language_version":   {},
 	}
 	_, ok := validKeys[key]
 	return ok

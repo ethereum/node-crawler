@@ -13,14 +13,14 @@ func createDB(db *sql.DB) error {
 	CREATE TABLE nodes (
 		ID text not null, 
 		name text,
-		major number,
-		minor number,
-		patch number,
-		tag text,
-		build text,
-		date text,
-		os text,
-		architecture text,
+		version_major number,
+		version_minor number,
+		version_patch number,
+		version_tag text,
+		version_build text,
+		version_date text,
+		os_name text,
+		os_architecture text,
 		language_name text,
 		language_version text,
 		PRIMARY KEY (ID)
@@ -42,8 +42,8 @@ func InsertCrawledNodes(db *sql.DB, crawledNodes []input.CrawledNode) error {
 		`insert into nodes(
 			ID, 
 			name, 
-			major, minor, patch, tag, build, date, 
-			os, architecture, 
+			version_major, version_minor, version_patch, version_tag, version_build, version_date, 
+			os_name, os_architecture, 
 			language_name, language_version) 
 			values(?,?,?,?,?,?,?,?,?,?,?,?)`)
 	if err != nil {
