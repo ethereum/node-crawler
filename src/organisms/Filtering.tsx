@@ -76,7 +76,7 @@ const EditableInput: React.FC<EditableProps> = forwardRef<EditableProps, 'div'>(
   }
 
   return (
-    <HStack borderWidth="thin" borderStyle="dashed" rounded="lg" p="2" ref={ref} {...rest} onClick={() => setEditing(true)}>
+    <HStack borderWidth="thin" borderStyle="dashed" rounded="lg" p="2" ref={ref} {...rest} onClick={() => onRemoveClicked && setEditing(true)}>
       <Text fontWeight="bold">{editItem.name}</Text>
       {editItem.operator && (<Text>{FilterOperatorToSymbol[editItem.operator]}</Text>)}
       <Text>{editItem.value}</Text>
