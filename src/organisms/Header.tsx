@@ -1,8 +1,31 @@
-import { Flex, Grid, HStack, Link, Text} from "@chakra-ui/react";
+import { Alert, AlertIcon, Button, Flex, Grid, GridItem, HStack, Link, Spacer, Text} from "@chakra-ui/react";
+import { useState } from "react";
+import { VscClose } from "react-icons/vsc";
 import { Link as ReactLink } from "react-router-dom"
 import { Logo } from "../atoms/Logo";
 import { LayoutEightPadding } from "../config";
 import { ColorModeSwitcher } from "./ColorModeSwitcher";
+
+export function Note() {
+  const [noteHidden, setNoteHidden] = useState(localStorage.getItem("noteHidden") === "true");
+
+  const hideNote = () => {
+    localStorage.setItem("noteHidden", "true");
+    setNoteHidden(true);
+  }
+
+  if (noteHidden) {
+    return null;
+  }
+
+  return (
+  <Alert status="info" onClick={hideNote}>
+    <AlertIcon />
+    This crawler only has a partial view of the Ethereum network. This is not a full count of every node on the network.
+    <Spacer /><Button variant="ghost" iconSpacing={0} size="sm" leftIcon={<VscClose />} title="Remove note" />
+  </Alert>
+  )
+}
 
 export function Header() {
   return (
@@ -18,6 +41,9 @@ export function Header() {
         </HStack>
       </Flex>
       <ColorModeSwitcher justifySelf="flex-end" />
+      <GridItem colSpan={2} >
+        <Note />
+      </GridItem>
     </Grid>
   )
 }
