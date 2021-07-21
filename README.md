@@ -13,4 +13,7 @@ Copy `.env` into `.env.local` and replace the variables. And then `npm install` 
 Run tests to make sure the data processing is working good. `npm test`
 
 ### Backend
-TBD
+```
+cd api
+go build ./ .
+```
