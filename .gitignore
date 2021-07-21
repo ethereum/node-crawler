@@ -15,3 +15,8 @@ build
 .env.production.local
 
 npm-debug.log*
+
+nodetable
+nodes
+node-crawler-backend.exe
+node-crawler-backend
