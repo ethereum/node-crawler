@@ -106,16 +106,33 @@ function Home() {
   };
   
   const drilldownFilter = (name: string, value: string) => {
+    const set = (filterGroup: FilterGroup, name: string, value: string) => {
+      const nameFoundIndex = filterGroup.findIndex(fg => fg?.name === name);
+      if (nameFoundIndex !== -1) {
+        filterGroup[nameFoundIndex]!.value = value
+      } else {
+        filterGroup.push({ name, value: value })
+      }
+    }
+
     const newFilters = [...filters || []]
     if (newFilters.length === 0) {
       newFilters.push([{name, value: value}])
     } else {
       newFilters.forEach(filterGroup => {
-        const nameFoundIndex = filterGroup.findIndex(fg => fg?.name === name);
-        if (nameFoundIndex !== -1) {
-          filterGroup[nameFoundIndex]!.value = value
+        if (name === 'version') {
+          const versions = value.split('.')
+          if (versions.length >= 1) {
+            set(filterGroup, 'version_major', versions[0]);
+          }
+          if (versions.length >= 2) {
+            set(filterGroup, 'version_minor', versions[1]);
+          }
+          if (versions.length >= 3) {
+            set(filterGroup, 'version_patch', versions[2]);
+          }
         } else {
-          filterGroup.push({ name, value: value })
+          set(filterGroup, name, value);
         }
       })
     }
@@ -125,6 +142,7 @@ function Home() {
 
   const onClientClicked = (e: any) => drilldownFilter('name', e.activeLabel);
   const onOperatingSystemClicked = (e: any) => drilldownFilter('os_name', e.name);
+  const onVersionClicked = (e: any) => drilldownFilter('version', e.activeLabel);
 
   const renderTooltipContent = (props: any): any => {
     if (!props.active || !props.payload || !props.payload.length) {
@@ -155,7 +173,7 @@ function Home() {
               data={barChartData}
               layout="vertical"
               margin={{ left: 60, right: 30 }}
-              onClick={data.versions.length ? undefined : onClientClicked}
+              onClick={data.versions.length ? onVersionClicked : onClientClicked}
             >
               <XAxis type="number" hide stroke={color} />
               <YAxis dataKey="name" type="category" interval={0} stroke={color} />
