@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+ import { useHistory, useLocation } from 'react-router-dom';
 import {
   PieChart, Pie, Cell, Tooltip, 
   LabelList, Bar, BarChart, XAxis, YAxis, ResponsiveContainer
@@ -9,12 +10,11 @@ import { schemeCategory10 } from 'd3-scale-chromatic';
 
 import { Grid, GridItem, useColorModeValue, Text } from '@chakra-ui/react';
 import { Card } from '../atoms/Card';
-import { useHistory, useLocation } from 'react-router-dom';
-import { Loader } from '../organisms/Loader';
-import { appendOtherGroup } from '../data/DataMassager';
-import { Filtering } from '../organisms/Filtering';
 import { TooltipCard } from '../atoms/TooltipCard';
-import { FilterGroup, generateFilterGroupsFromQueryString, generateQueryStringFromFilterGroups } from '../data/FilterTypes';
+import { appendOtherGroup } from '../data/DataMassager';
+import { cleanFilterGroup, FilterGroup, generateFilterGroupsFromQueryString, generateQueryStringFromFilterGroups } from '../data/FilterUtils';
+import { Filtering } from '../organisms/Filtering';
+import { Loader } from '../organisms/Loader';
 import { knownNodesFilter, LayoutEightPadding, LayoutTwoColSpan, LayoutTwoColumn } from '../config';
 
 const colors = scaleOrdinal(schemeCategory10).range();
@@ -25,6 +25,8 @@ interface NamedCount {
 }
 
 interface ClientData {
+  versions: NamedCount[];
+  versionsUnknown: number;
   clients: NamedCount[];
   clientsUnknown: number;
   operatingSystems: NamedCount[];
@@ -49,7 +51,8 @@ function Home() {
         console.error(e);
       }
     } else {
-      searchFilters = knownNodesFilter
+      // Deep clone since we are mutating it.
+      searchFilters = JSON.parse(JSON.stringify(knownNodesFilter));
     }
 
     setFilters(searchFilters)
@@ -64,10 +67,13 @@ function Home() {
       const response = await fetch(`/v1/dashboard${generateQueryStringFromFilterGroups(filters)}`)
       const json: ClientData = await response.json()
 
+      const [versions, unknownVersionsCount] = appendOtherGroup(json.versions)
       const [clients, unknownClientCount] = appendOtherGroup(json.clients)
       const [languages, unknownLanguageCount] = appendOtherGroup(json.languages)
       const [operatingSystems, unknownOperatingSystemCount] = appendOtherGroup(json.operatingSystems)
 
+      json.versions = versions
+      json.versionsUnknown = unknownVersionsCount
       json.clients = clients
       json.clientsUnknown = unknownClientCount
       json.languages = languages
@@ -98,23 +104,44 @@ function Home() {
       </g>
     );
   };
-
-  const onClientClick = (e: any) => {
-    history.push(`/${e.activePayload[0].payload.name}`)
+  
+  const drilldownFilter = (name: string, value: string) => {
+    const newFilters = [...filters || []]
+    if (newFilters.length === 0) {
+      newFilters.push([{name, value: value}])
+    } else {
+      newFilters.forEach(filterGroup => {
+        const nameFoundIndex = filterGroup.findIndex(fg => fg?.name === name);
+        if (nameFoundIndex !== -1) {
+          filterGroup[nameFoundIndex]!.value = value
+        } else {
+          filterGroup.push({ name, value: value })
+        }
+      })
+    }
+    
+    onFiltersChanged(cleanFilterGroup(newFilters));
   }
 
+  const onClientClicked = (e: any) => drilldownFilter('name', e.activeLabel);
+  const onOperatingSystemClicked = (e: any) => drilldownFilter('os_name', e.name);
+
   const renderTooltipContent = (props: any): any => {
-    if (!props.active || !props.payload) {
+    if (!props.active || !props.payload || !props.payload.length) {
       return null
     }
-
+    
+    const { payload: {name, count}} = props.payload[0]
     return (
       <TooltipCard>
-        <Text fontWeight="bold">{props.name}</Text>
-        <Text>Count: {props.value}</Text>
+        <Text fontWeight="bold">{name}</Text>
+        <Text>Count: {count}</Text>
       </TooltipCard>
     )
   };
+
+  const barChartData = data.versions.length ? data.versions : data.clients
+  const barChartTitle = data.versions.length ? 'Popular Versions' : 'Popular Clients'
 
   return (
     <Grid gridGap={LayoutEightPadding} templateColumns={LayoutTwoColumn} w="100%">
@@ -122,19 +149,19 @@ function Home() {
         <Filtering filters={filters} onFiltersChange={onFiltersChanged} />
       </GridItem>
       <GridItem colSpan={LayoutTwoColSpan}>
-        <Card title="Popular Clients" w="99%" contentHeight={data.clients.length * 40}>
-          <ResponsiveContainer height={data.clients.length * 40}>
+        <Card title={barChartTitle} w="99%" contentHeight={barChartData.length * 40}>
+          <ResponsiveContainer height={barChartData.length * 40}>
             <BarChart
-              data={data.clients}
+              data={barChartData}
               layout="vertical"
               margin={{ left: 60, right: 30 }}
-              onClick={onClientClick}
+              onClick={data.versions.length ? undefined : onClientClicked}
             >
               <XAxis type="number" hide stroke={color} />
               <YAxis dataKey="name" type="category" interval={0} stroke={color} />
-              <Tooltip cursor={false} label={renderTooltipContent}/>
+              <Tooltip cursor={false} content={renderTooltipContent}/>
               <Bar dataKey="count">
-                {data.clients.map((entry, index) => (
+                {barChartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={colors[index % 10]} />
                 ))}
                 <LabelList position="right" />
@@ -153,11 +180,12 @@ function Home() {
               startAngle={180}
               endAngle={-180}
               innerRadius={30}
-              minAngle={20}
               outerRadius={100}
-              paddingAngle={10}
+              paddingAngle={data.operatingSystems.length === 1 ? 0 : 10}
+              minAngle={data.operatingSystems.length === 1 ? 0 : 20}
               label={renderLabelContent}
               isAnimationActive={false}
+              onClick={onOperatingSystemClicked}
             >
               {
                 data.operatingSystems.map((entry, index) => (
@@ -182,8 +210,8 @@ function Home() {
               endAngle={-180}
               innerRadius={30}
               outerRadius={100}
-              paddingAngle={20}
-              minAngle={20}
+              paddingAngle={data.languages.length === 1 ? 0 : 10}
+              minAngle={data.languages.length === 1 ? 0 : 20}
               label={renderLabelContent}
               isAnimationActive={false}
             >

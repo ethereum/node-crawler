@@ -1,6 +1,6 @@
 import { scaleOrdinal } from "d3-scale";
 import { schemeCategory10 } from "d3-scale-chromatic";
-import { FilterGroup, generateQueryStringFromFilterGroups } from "./data/FilterTypes";
+import { FilterGroup, generateQueryStringFromFilterGroups } from "./data/FilterUtils";
 
 export const colors = scaleOrdinal(schemeCategory10).range();
 

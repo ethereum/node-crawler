@@ -1,7 +1,7 @@
 import { Badge, Box, BoxProps, Button, Drawer, DrawerBody, DrawerCloseButton, DrawerContent, DrawerFooter, DrawerHeader, DrawerOverlay, forwardRef, HStack, Input, Select, StackProps, Text, useColorModeValue, useDisclosure, VStack } from "@chakra-ui/react"
 import React, { useCallback, useRef, useState, useEffect } from "react";
 import { VscCheck, VscClose, VscFilter, VscRemove } from "react-icons/vsc"
-import { FilterGroup, FilterOperatorToSymbol, FilterItem, FilterOperator, Filter, cleanFilterGroup } from "../data/FilterTypes";
+import { FilterGroup, FilterOperatorToSymbol, FilterItem, FilterOperator, Filter, cleanFilterGroup } from "../data/FilterUtils";
 
 type CachedNameMap = { [key: string]: boolean };
 interface EditableProps extends StackProps {
