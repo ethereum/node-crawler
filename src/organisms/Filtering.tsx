@@ -1,7 +1,7 @@
 import { Badge, Box, BoxProps, Button, Drawer, DrawerBody, DrawerCloseButton, DrawerContent, DrawerFooter, DrawerHeader, DrawerOverlay, forwardRef, HStack, Input, Select, StackProps, Text, useColorModeValue, useDisclosure, VStack } from "@chakra-ui/react"
 import React, { useCallback, useRef, useState, useEffect } from "react";
 import { VscCheck, VscClose, VscFilter, VscRemove } from "react-icons/vsc"
-import { FilterGroup, FilterOperatorToSymbol, FilterItem, FilterOperator, Filter } from "../data/FilterTypes";
+import { FilterGroup, FilterOperatorToSymbol, FilterItem, FilterOperator, Filter, cleanFilterGroup } from "../data/FilterTypes";
 
 type CachedNameMap = { [key: string]: boolean };
 interface EditableProps extends StackProps {
@@ -54,8 +54,8 @@ const EditableInput: React.FC<EditableProps> = forwardRef<EditableProps, 'div'>(
           {(editItem.name === 'version_tag' || cachedNames['version_tag']) && (<option value="version_tag">Version (tag)</option>)}
           {(editItem.name === 'version_build' || cachedNames['version_build']) && (<option value="version_build">Version (build)</option>)}
           {(editItem.name === 'version_date' || cachedNames['version_date']) && (<option value="version_date">Version (date)</option>)}
-          {(editItem.name === 'os' || cachedNames['os']) && (<option value="os">Operating System</option>)}
-          {(editItem.name === 'architecture' || cachedNames['architecture']) && (<option value="architecture">Architecture</option>)}
+          {(editItem.name === 'os_name' || cachedNames['os_name']) && (<option value="os_name">Operating System</option>)}
+          {(editItem.name === 'os_architecture' || cachedNames['os_architecture']) && (<option value="os_architecture">Architecture</option>)}
           {(editItem.name === 'language_name' || cachedNames['language_name']) && (<option value="language_name">Runtime Name</option>)}
           {(editItem.name === 'language_version' || cachedNames['language_version']) && (<option value="language_version">Runtime Version</option>)}
         </Select>
@@ -107,8 +107,8 @@ function FilterGroupItem(props: FilterGroupItemProps) {
     'version_tag': true,
     'version_build': true,
     'version_date': true,
-    'os': true,
-    'architecture': true,
+    'os_name': true,
+    'os_architecture': true,
     'language_name': true,
     'language_version': true
   })
@@ -252,7 +252,13 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
   }, [])
 
   const onApply = () => {
-    onFiltersChange && onFiltersChange(editFilters.filter(f => f !== undefined))
+    const filtersToApply = cleanFilterGroup(editFilters.reduce<FilterGroup[]>((acc, curr) => {
+      curr = curr.filter(g => !!g)
+      if (curr.length) acc.push(curr)
+      return acc
+    }, []));
+    setEditFilters(filtersToApply)
+    onFiltersChange && onFiltersChange(filtersToApply)
     onClose()
   }
 
@@ -277,7 +283,7 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
       <Drawer
         isOpen={isOpen}
         placement="right"
-        onClose={onClose}
+        onClose={onCancel}
         finalFocusRef={btnRef}
       >
         <DrawerOverlay />

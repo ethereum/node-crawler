@@ -77,3 +77,22 @@ export function countTotalClientsInFilter(filters: FilterGroup[]) {
     }, 0);
   }, 0);
 }
+
+export function cleanFilterGroup(groups: FilterGroup[]) {
+  const cache = new Set<string>()
+  const hashGroup = (filterGroup: FilterGroup) => {
+    return filterGroup.map(filter => {
+      if (!filter) return undefined
+      return `${filter.name}=${filter.value}`
+    }).filter(f => !!f).sort((a: any, b: any) => b - a).join('&')
+  }
+
+  return groups.filter(f => {
+    const hash = hashGroup(f);
+    if (!cache.has(hash)) {
+      cache.add(hash); 
+      return true;
+    }
+    return false;
+  })
+}
