@@ -1,15 +1,11 @@
-clients.json
-
 # dependencies
-/node_modules
-/.pnp
-.pnp.js
+node_modules
 
 # testing
 /coverage
 
 # production
-/build
+build
 
 # misc
 .DS_Store
@@ -19,5 +15,3 @@ clients.json
 .env.production.local
 
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
