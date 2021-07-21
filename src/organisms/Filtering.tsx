@@ -189,24 +189,12 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
   const [totalFilters, setTotalFilters] = React.useState(filters?.length || 0)
 
   useEffect(() => {
+    setEditFilters(filters || []);
+  }, [filters]);
+
+  useEffect(() => {
     setTotalFilters(editFilters.reduce((prev, curr) => prev + curr.length, 0) || 0)
   }, [editFilters])
-
-  const onApply = () => {
-    onFiltersChange && onFiltersChange(editFilters.filter(f => f !== undefined))
-    onClose()
-  }
-
-  const onCancel = () => {
-    setEditFilters(filters || [])
-    onClose()
-  }
-
-  const onClearAll = () => {
-    setEditFilters([])
-    onFiltersChange && onFiltersChange([])
-    onClose()
-  }
 
   const removeFilter = useCallback((groupIndex: number, filterIndex?: number) => {
     if (filterIndex === undefined) {
@@ -262,6 +250,22 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
       return newGroupFilters
     })
   }, [])
+
+  const onApply = () => {
+    onFiltersChange && onFiltersChange(editFilters.filter(f => f !== undefined))
+    onClose()
+  }
+
+  const onCancel = () => {
+    setEditFilters(filters || [])
+    onClose()
+  }
+
+  const onClearAll = () => {
+    setEditFilters([])
+    onFiltersChange && onFiltersChange([])
+    onClose()
+  }
 
   const filterText = totalFilters > 0 ? `${totalFilters} filters applied` : "Apply filter"
 
