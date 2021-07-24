@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"flag"
 	"fmt"
 	"os"
 	"sync"
@@ -14,20 +15,22 @@ import (
 )
 
 var (
-	inputDBName = "nodetable"
-	myDBName    = "nodes"
+	crawlerDBPath = flag.String("crawler-db-path", "nodetable", "Crawler Database SQLite Path")
+	apiDBPath = flag.String("api-db-path", "nodes", "API Database SQLite Path")
 )
 
 func main() {
-	crawlerDB, err := sql.Open("sqlite3", inputDBName)
+	flag.Parse()
+	
+	crawlerDB, err := sql.Open("sqlite3", *crawlerDBPath)
 	if err != nil {
 		panic(err)
 	}
 	shouldInit := false
-	if _, err := os.Stat(myDBName); os.IsNotExist(err) {
+	if _, err := os.Stat(*apiDBPath); os.IsNotExist(err) {
 		shouldInit = true
 	}
-	nodeDB, err := sql.Open("sqlite3", myDBName)
+	nodeDB, err := sql.Open("sqlite3", *apiDBPath)
 	if err != nil {
 		panic(err)
 	}
