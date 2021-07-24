@@ -92,7 +92,7 @@ function Home() {
   }, [history, location])
 
   if (!data) {
-    return <Loader>Processing data</Loader>
+    return <Loader>Loading data...</Loader>
   }
 
   const renderLabelContent: React.FunctionComponent = (props: any) => {

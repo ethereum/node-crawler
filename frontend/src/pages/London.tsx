@@ -83,7 +83,7 @@ export function London() {
   }, [])
 
   if (!data) {
-    return <Loader>Processing data</Loader>
+    return <Loader>Loading data...</Loader>
   }
 
   const renderLabelContent = (props: any): any => {

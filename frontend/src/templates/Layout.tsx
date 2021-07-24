@@ -9,9 +9,9 @@ interface LayoutProps {
 
 export function Layout(props: LayoutProps) {
   return (
-    <VStack minH="100vh" align="flex-start" justify="flex-start">
+    <VStack minH="100vh" align="flex-start" justify="flex-start" bg="inherit">
       <Header />
-      <VStack spacing={LayoutEightPadding} pl={LayoutEightPadding} pr={LayoutEightPadding} pb={LayoutEightPadding} width="100%">
+      <VStack spacing={LayoutEightPadding} pl={LayoutEightPadding} pr={LayoutEightPadding} pb={LayoutEightPadding} width="100%" bg="inherit">
         {props.children}
       </VStack>
       <Footer />

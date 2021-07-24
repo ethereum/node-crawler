@@ -19,7 +19,7 @@ export function Note() {
   }
 
   return (
-  <Alert status="info" onClick={hideNote}>
+  <Alert status="info" onClick={hideNote} mt={4}>
     <AlertIcon />
     This crawler only has a partial view of the Ethereum network. This is not a full count of every node on the network.
     <Spacer /><Button variant="ghost" iconSpacing={0} size="sm" leftIcon={<VscClose />} title="Remove note" />
