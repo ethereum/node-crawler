@@ -1,7 +1,8 @@
-import { Grid, GridItem, useColorModeValue, Table, Thead, Tbody, Td, Th, Tr } from "@chakra-ui/react";
+import { Grid, GridItem, useColorModeValue, Thead, Tbody, Tr, Box } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { ResponsiveContainer, Cell, Pie, PieChart } from "recharts";
 import { Card } from "../atoms/Card";
+import { TablePlus, TdPlus, ThPlus } from "../atoms/TablePlus";
 import { londonFilterString, knownNodesFilterString, normalizeClientNames, londonFilter, colors, LayoutEightPadding, LayoutTwoColSpan, LayoutTwoColumn } from "../config";
 import { Filtering } from "../organisms/Filtering";
 import { Loader } from "../organisms/Loader";
@@ -101,25 +102,27 @@ export function London() {
       <GridItem colSpan={LayoutTwoColSpan}>
         <Filtering filters={londonFilter} />
       </GridItem>
-      <Card title="London Clients" w="99%" contentHeight={data.clients.length * 40} h="100%">
-        <Table>
-          <Thead>
-            <Tr>
-              <Th>Client</Th>
-              <Th>Ready</Th>
-              <Th>Not-Ready</Th>
-            </Tr>
-          </Thead>
-          <Tbody>
-            {data.clients.map((item, index) => (
-              <Tr key={index}>
-                <Td>{item.name}</Td>
-                <Td>{item.count} ({item.readyPercentage}%)</Td>
-                <Td>{item.total - item.count} ({item.notReadyPercentage}%)</Td>
+      <Card title="London Clients" w="99%" contentHeight={300} h="100%">
+        <Box overflow="auto" flex="1" h="100%" position="relative">
+          <TablePlus>
+            <Thead>
+              <Tr>
+                <ThPlus>Client</ThPlus>
+                <ThPlus>Ready</ThPlus>
+                <ThPlus>Not-Ready</ThPlus>
               </Tr>
-            ))}
-          </Tbody>
-        </Table>
+            </Thead>
+            <Tbody>
+              {data.clients.map((item, index) => (
+                <Tr key={index}>
+                  <TdPlus>{item.name}</TdPlus>
+                  <TdPlus>{item.count} ({item.readyPercentage}%)</TdPlus>
+                  <TdPlus>{item.total - item.count} ({item.notReadyPercentage}%)</TdPlus>
+                </Tr>
+              ))}
+            </Tbody>
+          </TablePlus>
+        </Box>
       </Card>
       <Card title="London Client Distribution" w="99%" contentHeight={300}>
         <ResponsiveContainer height={300}>

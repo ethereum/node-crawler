@@ -35,6 +35,6 @@ export const londonFilterString = generateQueryStringFromFilterGroups(londonFilt
 export const knownNodesFilterString = generateQueryStringFromFilterGroups(knownNodesFilter)
 
 
-export const LayoutEightPadding = [4, 4, 8]
-export const LayoutTwoColumn = ["repeat(1, 1fr)", "repeat(1, 1fr)", "repeat(2, 1fr)"]
-export const LayoutTwoColSpan = [1, 1, 2]
+export const LayoutEightPadding = [4, 4, 4, 8]
+export const LayoutTwoColumn = ["repeat(1, 1fr)", "repeat(1, 1fr)", "repeat(1, 1fr)", "repeat(2, 1fr)"]
+export const LayoutTwoColSpan = [1, 1, 1, 2]

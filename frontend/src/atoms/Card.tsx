@@ -1,26 +1,27 @@
-import { Box, Flex, FlexOptions, forwardRef, Heading, HTMLChakraProps, useColorModeValue } from "@chakra-ui/react";
+import { Box, forwardRef, Heading, HTMLChakraProps, useStyleConfig } from "@chakra-ui/react";
 import React from "react";
 
-interface CardProps extends HTMLChakraProps<"div">, FlexOptions  {
+interface CardProps extends HTMLChakraProps<"div">  {
   title: string
   contentHeight?: number
+  variant?: string
 }
 
 export const Card = forwardRef<CardProps, 'div'>((props: CardProps, ref: React.ForwardedRef<any>) => {
-  const color = useColorModeValue("gray.200", "gray.900")
-
   const {
+    variant,
     title,
     contentHeight,
     ...rest
   } = props
+  const styles = useStyleConfig("Card", { variant })
 
   return (
-    <Flex direction="column" px="2" py="3" rounded="md" shadow="lg" bg={color} ref={ref} {...rest}>
+    <Box __css={styles} ref={ref} {...rest}>
       <Heading size="sm">{title}</Heading>
-      <Box flex="1" mt="4" minHeight={contentHeight + 'px'} height={contentHeight + 'px'} maxHeight={contentHeight + 'px'}>
+      <Box flex="1" mt="4" position="relative" minHeight={contentHeight + 'px'}>
         {props.children}
       </Box>
-    </Flex>
+    </Box>
   )
 })
