@@ -19,7 +19,7 @@ export const Card = forwardRef<CardProps, 'div'>((props: CardProps, ref: React.F
   return (
     <Box __css={styles} ref={ref} {...rest}>
       <Heading size="sm">{title}</Heading>
-      <Box flex="1" mt="4" position="relative" minHeight={contentHeight + 'px'}>
+      <Box flex="1" mt="4" position="relative" minHeight={contentHeight + 'px'} display="flex">
         {props.children}
       </Box>
     </Box>
