@@ -12,7 +12,7 @@ import { Grid, GridItem, useColorModeValue, Text } from '@chakra-ui/react';
 import { Card } from '../atoms/Card';
 import { TooltipCard } from '../atoms/TooltipCard';
 import { appendOtherGroup } from '../data/DataMassager';
-import { cleanFilterGroup, FilterGroup, generateFilterGroupsFromQueryString, generateQueryStringFromFilterGroups } from '../data/FilterUtils';
+import { drilldownFilter, filterCount, FilterGroup, generateFilterGroupsFromQueryString, generateQueryStringFromFilterGroups } from '../data/FilterUtils';
 import { Filtering } from '../organisms/Filtering';
 import { Loader } from '../organisms/Loader';
 import { knownNodesFilter, LayoutEightPadding, LayoutTwoColSpan, LayoutTwoColumn } from '../config';
@@ -50,7 +50,9 @@ function Home() {
       } catch (e) {
         console.error(e);
       }
-    } else {
+    }
+    
+    if (filterCount(searchFilters) === 0) {
       // Deep clone since we are mutating it.
       searchFilters = JSON.parse(JSON.stringify(knownNodesFilter));
     }
@@ -91,6 +93,10 @@ function Home() {
     history.push(location.pathname + generateQueryStringFromFilterGroups(filters))
   }, [history, location])
 
+  const onClientClicked = useCallback((e: any) => onFiltersChanged(drilldownFilter(filters, 'name', e.activeLabel)), [filters, onFiltersChanged])
+  const onOperatingSystemClicked = useCallback((e: any) => onFiltersChanged(drilldownFilter(filters, 'os_name', e.name)), [filters, onFiltersChanged])
+  const onVersionClicked = useCallback((e: any) => onFiltersChanged(drilldownFilter(filters, 'version', e.activeLabel)), [filters, onFiltersChanged])
+
   if (!data) {
     return <Loader>Loading data...</Loader>
   }
@@ -105,45 +111,6 @@ function Home() {
     );
   };
   
-  const drilldownFilter = (name: string, value: string) => {
-    const set = (filterGroup: FilterGroup, name: string, value: string) => {
-      const nameFoundIndex = filterGroup.findIndex(fg => fg?.name === name);
-      if (nameFoundIndex !== -1) {
-        filterGroup[nameFoundIndex]!.value = value
-      } else {
-        filterGroup.push({ name, value: value })
-      }
-    }
-
-    const newFilters = [...filters || []]
-    if (newFilters.length === 0) {
-      newFilters.push([{name, value: value}])
-    } else {
-      newFilters.forEach(filterGroup => {
-        if (name === 'version') {
-          const versions = value.split('.')
-          if (versions.length >= 1) {
-            set(filterGroup, 'version_major', versions[0]);
-          }
-          if (versions.length >= 2) {
-            set(filterGroup, 'version_minor', versions[1]);
-          }
-          if (versions.length >= 3) {
-            set(filterGroup, 'version_patch', versions[2]);
-          }
-        } else {
-          set(filterGroup, name, value);
-        }
-      })
-    }
-    
-    onFiltersChanged(cleanFilterGroup(newFilters));
-  }
-
-  const onClientClicked = (e: any) => drilldownFilter('name', e.activeLabel);
-  const onOperatingSystemClicked = (e: any) => drilldownFilter('os_name', e.name);
-  const onVersionClicked = (e: any) => drilldownFilter('version', e.activeLabel);
-
   const renderTooltipContent = (props: any): any => {
     if (!props.active || !props.payload || !props.payload.length) {
       return null

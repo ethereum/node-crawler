@@ -96,3 +96,100 @@ export function cleanFilterGroup(groups: FilterGroup[]) {
     return false;
   })
 }
+
+export interface UniqueFilters {
+  name: string;
+  value: string;
+}
+
+export function getUniqueFilters(groups: FilterGroup[] | undefined): UniqueFilters[] {
+  if (!groups) {
+    return []
+  }
+  
+  const cache = new Map<string, number>()
+
+  groups.forEach(group => {
+    group.forEach(filter => {
+      if (!filter) return;
+      const key = `${filter.name}|${filter.value}`
+      cache.set(key, (cache.get(key) || 0) + 1)
+    })
+  })
+
+  const processedFilters = [...cache.entries()].filter(f => f[1] === groups.length).map(f => {
+    const [ name, value ] = f[0].split('|')
+    return {
+      name,
+      value
+    }
+  })
+
+  let versionString = {
+    major: '',
+    minor: '',
+    patch: ''
+  }
+
+  const postProcess = processedFilters.reduce((acc: UniqueFilters[], filter) => {
+    if (filter.name.startsWith('version_')) {
+      const versionType = filter.name.substr('version_'.length) as 'major' | 'minor' | 'patch'
+      versionString[versionType] = filter.value
+    } else {
+      acc.push(filter);
+    }
+    return acc
+  }, [])
+
+  if (versionString.major || versionString.minor || versionString.patch) {
+    postProcess.push({
+      name: 'version',
+      value: `${versionString.major || 0}.${versionString.minor || 0}.${versionString.patch || 0}`
+    })
+  }
+
+  return postProcess
+}
+
+  
+export const drilldownFilter = (filters: FilterGroup[] | undefined, name: string, value: string) => {
+  const set = (filterGroup: FilterGroup, name: string, value: string) => {
+    const nameFoundIndex = filterGroup.findIndex(fg => fg?.name === name);
+    if (nameFoundIndex !== -1) {
+      filterGroup[nameFoundIndex]!.value = value
+    } else {
+      filterGroup.push({ name, value: value })
+    }
+  }
+
+  const newFilters = [...filters || []]
+  if (newFilters.length === 0) {
+    newFilters.push([{name, value: value}])
+  } else {
+    newFilters.forEach(filterGroup => {
+      if (name === 'version') {
+        const versions = value.split('.')
+        if (versions.length >= 1) {
+          set(filterGroup, 'version_major', versions[0]);
+        }
+        if (versions.length >= 2) {
+          set(filterGroup, 'version_minor', versions[1]);
+        }
+        if (versions.length >= 3) {
+          set(filterGroup, 'version_patch', versions[2]);
+        }
+      } else {
+        set(filterGroup, name, value);
+      }
+    })
+  }
+  
+  return cleanFilterGroup(newFilters);
+}
+
+export function filterCount(filters: FilterGroup[] | undefined): number {
+  if (!filters || filters.length === 0)
+    return 0
+
+  return filters.reduce((prev, curr) => prev + curr.length, 0) || 0;
+}

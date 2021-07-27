@@ -1,7 +1,7 @@
-import { Badge, Box, BoxProps, Button, Drawer, DrawerBody, DrawerCloseButton, DrawerContent, DrawerFooter, DrawerHeader, DrawerOverlay, forwardRef, HStack, Input, Select, StackProps, Text, useColorModeValue, useDisclosure, VStack } from "@chakra-ui/react"
+import { Badge, Box, BoxProps, Button, Drawer, DrawerBody, DrawerCloseButton, DrawerContent, DrawerFooter, DrawerHeader, DrawerOverlay, Flex, forwardRef, HStack, Input, Select, StackProps, Tag, TagLabel, TagRightIcon, Text, useColorModeValue, useDisclosure, VStack } from "@chakra-ui/react"
 import React, { useCallback, useRef, useState, useEffect } from "react";
 import { VscCheck, VscClose, VscFilter, VscRemove } from "react-icons/vsc"
-import { FilterGroup, FilterOperatorToSymbol, FilterItem, FilterOperator, Filter, cleanFilterGroup } from "../data/FilterUtils";
+import { FilterGroup, FilterOperatorToSymbol, FilterItem, FilterOperator, Filter, cleanFilterGroup, getUniqueFilters, UniqueFilters, filterCount } from "../data/FilterUtils";
 
 type CachedNameMap = { [key: string]: boolean };
 interface EditableProps extends StackProps {
@@ -185,15 +185,17 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
   const { isOpen, onOpen, onClose } = useDisclosure()
   const btnRef: React.RefObject<any> = useRef()
 
+  const [uniqueFilters, setUniqueFilters] = useState<UniqueFilters[]>([])
   const [editFilters, setEditFilters] = React.useState<FilterGroup[]>(filters || [])
   const [totalFilters, setTotalFilters] = React.useState(filters?.length || 0)
 
   useEffect(() => {
+    setUniqueFilters(getUniqueFilters(filters));
     setEditFilters(filters || []);
   }, [filters]);
 
   useEffect(() => {
-    setTotalFilters(editFilters.reduce((prev, curr) => prev + curr.length, 0) || 0)
+    setTotalFilters(filterCount(editFilters))
   }, [editFilters])
 
   const removeFilter = useCallback((groupIndex: number, filterIndex?: number) => {
@@ -251,6 +253,19 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
     })
   }, [])
 
+  const removeUniqueFilter = useCallback((uniqueFilter: UniqueFilters) => {
+    const newGroupFilters = [...editFilters].map(group => group.filter(filter => {
+      if (uniqueFilter.name === 'version') {
+        // const [major, minor, patch] = uniqueFilter.value.split('.')
+        return !filter?.name.startsWith('version')
+      } else {
+        return filter?.name !== uniqueFilter.name
+      }
+    }))
+    setEditFilters(newGroupFilters)
+    onFiltersChange && onFiltersChange(newGroupFilters)
+  }, [editFilters, onFiltersChange]);
+
   const onApply = () => {
     const filtersToApply = cleanFilterGroup(editFilters.reduce<FilterGroup[]>((acc, curr) => {
       curr = curr.filter(g => !!g)
@@ -276,7 +291,16 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
   const filterText = totalFilters > 0 ? `${totalFilters} filters applied` : "Apply filter"
 
   return (
-    <>
+    <Flex direction="row" justify="center" align="center">
+      <Flex flex={1} gridGap={4}>
+        {uniqueFilters.length > 0 && uniqueFilters.map((filter, key) => (
+          <Tag size="md" key={key} variant="subtle" colorScheme="cyan">
+            <TagLabel>{filter.name}</TagLabel>
+            <TagLabel ml={2} fontWeight="bold">{filter.value}</TagLabel>
+            <TagRightIcon as={VscClose} cursor="pointer" onClick={() => removeUniqueFilter(filter)}/>
+          </Tag>
+        ))}
+      </Flex>
       <HStack {...rest} justifyContent='flex-end' ref={ref}>
         <Button ref={btnRef} leftIcon={<VscFilter />} variant="ghost" onClick={onOpen}>{filterText}</Button>
       </HStack>
@@ -322,6 +346,6 @@ export const Filtering: React.FC<FilteringProps> = forwardRef<FilteringProps, 'd
           )}
         </DrawerContent>
       </Drawer>
-    </>
+    </Flex>
   )
 })
