@@ -93,9 +93,9 @@ function Home() {
     history.push(location.pathname + generateQueryStringFromFilterGroups(filters))
   }, [history, location])
 
-  const onClientClicked = useCallback((e: any) => onFiltersChanged(drilldownFilter(filters, 'name', e.activeLabel)), [filters, onFiltersChanged])
-  const onOperatingSystemClicked = useCallback((e: any) => onFiltersChanged(drilldownFilter(filters, 'os_name', e.name)), [filters, onFiltersChanged])
-  const onVersionClicked = useCallback((e: any) => onFiltersChanged(drilldownFilter(filters, 'version', e.activeLabel)), [filters, onFiltersChanged])
+  const onClientClicked = useCallback((e: any) => e && onFiltersChanged(drilldownFilter(filters, 'name', e.activeLabel)), [filters, onFiltersChanged])
+  const onOperatingSystemClicked = useCallback((e: any) => e && onFiltersChanged(drilldownFilter(filters, 'os_name', e.name)), [filters, onFiltersChanged])
+  const onVersionClicked = useCallback((e: any) => e && onFiltersChanged(drilldownFilter(filters, 'version', e.activeLabel)), [filters, onFiltersChanged])
 
   if (!data) {
     return <Loader>Loading data...</Loader>
