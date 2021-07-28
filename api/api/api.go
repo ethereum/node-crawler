@@ -7,16 +7,38 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gorilla/mux"
+	lru "github.com/hashicorp/golang-lru"
 )
 
 type Api struct {
-	db *sql.DB
+	db    *sql.DB
+	cache *lru.Cache
 }
 
 func New(sdb *sql.DB) *Api {
-	return &Api{db: sdb}
+	cache, err := lru.New(256)
+	if err != nil {
+		return nil
+	}
+	api := &Api{db: sdb, cache: cache}
+	go api.dropCacheLoop()
+	return api
+}
+
+func (a *Api) dropCacheLoop() {
+	ticker := time.NewTicker(2 * time.Minute)
+	// Drop the cache every 2 minutes
+	for range ticker.C {
+		fmt.Println("Dropping Cache")
+		c, err := lru.New(256)
+		if err != nil {
+			panic(err)
+		}
+		a.cache = c
+	}
 }
 
 func (a *Api) HandleRequests(wg *sync.WaitGroup) {
@@ -25,7 +47,7 @@ func (a *Api) HandleRequests(wg *sync.WaitGroup) {
 	router.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) { rw.Write([]byte("Hello")) })
 	router.HandleFunc("/v1/dashboard", a.handleDashboard).Queries("filter", "{filter}")
 	router.HandleFunc("/v1/dashboard", a.handleDashboard)
-
+	fmt.Println("Start serving on port 10000")
 	http.ListenAndServe(":10000", router)
 }
 
@@ -98,6 +120,27 @@ func unmarshalFilterArgs(arg string) (string, string, string, error) {
 	return "", "", "", fmt.Errorf("umarshalling failed, got %v want 2 or 3 args", len(split))
 }
 
+type result struct {
+	Clients          []client `json:"clients"`
+	Languages        []client `json:"languages"`
+	OperatingSystems []client `json:"operatingSystems"`
+	Versions         []client `json:"versions"`
+}
+
+func (a *Api) cachedOrQuery(query string, whereArgs []interface{}) []client {
+	var result []client
+	if cl, ok := a.cache.Get(query); ok {
+		result = cl.([]client)
+	} else {
+		var err error
+		result, err = clientQuery(a.db, query, whereArgs...)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}
+	return result
+}
+
 func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
@@ -115,49 +158,30 @@ func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	var topLanguageQuery string
-	if nameCountInQuery == 1 { 
+	if nameCountInQuery == 1 {
 		topLanguageQuery = fmt.Sprintf("SELECT Name, Count(*) as Count FROM (SELECT language_name || language_version as Name FROM nodes %v) GROUP BY Name ORDER BY Count DESC", where)
 	} else {
 		topLanguageQuery = fmt.Sprintf("SELECT language_name as Name, COUNT(language_name) as Count FROM nodes %v GROUP BY language_name ORDER BY Count DESC", where)
 	}
-	
+
 	topClientsQuery := fmt.Sprintf("SELECT name as Name, COUNT(name) as Count FROM nodes %v GROUP BY name ORDER BY count DESC", where)
 	topOsQuery := fmt.Sprintf("SELECT os_name as Name, COUNT(os_name) as Count FROM nodes %v GROUP BY os_name ORDER BY count DESC", where)
 	topVersionQuery := fmt.Sprintf("SELECT Name, Count(*) as Count FROM (SELECT version_major || '.' || version_minor || '.' || version_patch as Name FROM nodes %v) GROUP BY Name ORDER BY Count DESC ", where)
 
-	clients, err := clientQuery(a.db, topClientsQuery, whereArgs...)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	language, err := clientQuery(a.db, topLanguageQuery, whereArgs...)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	operatingSystems, err := clientQuery(a.db, topOsQuery, whereArgs...)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	// When the filter has a name, we don't want to include that in the json response.
+	clients := a.cachedOrQuery(topClientsQuery, whereArgs)
+	language := a.cachedOrQuery(topLanguageQuery, whereArgs)
+	operatingSystems := a.cachedOrQuery(topOsQuery, whereArgs)
 	var versions []client
 	if nameCountInQuery == 1 {
-		dataVersions, err := clientQuery(a.db, topVersionQuery, whereArgs...)
-		versions = dataVersions
-		if err != nil {
-			fmt.Println(err)
-		}
+		versions = a.cachedOrQuery(topVersionQuery, whereArgs)
 	}
 
-	type result struct {
-		Clients          []client `json:"clients"`
-		Languages        []client `json:"languages"`
-		OperatingSystems []client `json:"operatingSystems"`
-		Versions         []client `json:"versions"`
-	}
-
-	json.NewEncoder(rw).Encode(result{Clients: clients, Languages: language, OperatingSystems: operatingSystems, Versions: versions})
+	res := result{Clients: clients, Languages: language, OperatingSystems: operatingSystems, Versions: versions}
+	a.cache.Add(topClientsQuery, clients)
+	a.cache.Add(topLanguageQuery, language)
+	a.cache.Add(topOsQuery, operatingSystems)
+	a.cache.Add(topVersionQuery, versions)
+	json.NewEncoder(rw).Encode(res)
 }
 
 func clientQuery(db *sql.DB, query string, args ...interface{}) ([]client, error) {
@@ -179,18 +203,18 @@ func clientQuery(db *sql.DB, query string, args ...interface{}) ([]client, error
 
 func validateKey(key string) bool {
 	validKeys := map[string]struct{}{
-		"id":                 {},
-		"name":               {},
-		"version_major":      {},
-		"version_minor":      {},
-		"version_patch":      {},
-		"version_tag":        {},
-		"version_build":      {},
-		"version_date":       {},
-		"os_name":            {},
-		"os_architecture":       {},
-		"language_name":      {},
-		"language_version":   {},
+		"id":               {},
+		"name":             {},
+		"version_major":    {},
+		"version_minor":    {},
+		"version_patch":    {},
+		"version_tag":      {},
+		"version_build":    {},
+		"version_date":     {},
+		"os_name":          {},
+		"os_architecture":  {},
+		"language_name":    {},
+		"language_version": {},
 	}
 	_, ok := validKeys[key]
 	return ok

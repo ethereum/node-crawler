@@ -32,7 +32,7 @@ func createDB(db *sql.DB) error {
 }
 
 func InsertCrawledNodes(db *sql.DB, crawledNodes []input.CrawledNode) error {
-	fmt.Printf("Writing nodes to db: %v", len(crawledNodes))
+	fmt.Printf("Writing nodes to db: %v\n", len(crawledNodes))
 
 	tx, err := db.Begin()
 	if err != nil {
