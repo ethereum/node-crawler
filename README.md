@@ -1,16 +1,18 @@
 # Ethereum Node Crawler
 
-Crawls the network for Ethereum nodes and creates a dashboard that lets you visualize them.
+This repository includes frontend and API for Ethereum network crawler. Crawler used for discovering peers is part of `devp2p` tool from [go-ethereum](https://github.com/ethereum/go-ethereum) and is currently not included in this repository. 
+
+API software reads raw database of nodes data crawled from the network, filters it, caches and serves as API. Frontend is a web interface which reads data from the API and visualizes them as a dashboard. 
 
 Features:
 - Advanced filtering, allows you to add filters for a customized dashboard
 - Drilldown support, allows you to drill down the data to find interesting trends
-- Fork view, currently supports predefined filters for London fork
-- Works in mobile
+- Network upgrade readiness overview, currently supports predefined filters for London upgrade
+- Responsive mobile design 
 
 ## Contribute
 
-This is an early project to make a rich dashboard for ethereum nodes.
+Project is still in an early stage, contribution and testing is welcomed. You can run manually each part of the software for development purposes or deploy whole production ready stack with Docker. 
 
 ### Frontend 
 #### Development
@@ -57,7 +59,7 @@ Download latest golang.
 go run ./ .
 ```
 
-### Production
+#### Production
 
 1. Build the assembly into `/usr/bin`
   ```
@@ -87,6 +89,19 @@ go run ./ .
    systemctl start node-crawler-backend
    systemctl status node-crawler-backend
    ```
+
+### Docker setup
+
+Production build of preconfigured software stack can be easily deployed with Docker. To achieve this, clone this repository and access `docker` directory. 
+
+```
+cd docker
+```
+Make sure you have Docker and Compose tool installed. 
+```
+docker-compose up
+```
+
 
 ### Crawler
 TBD
