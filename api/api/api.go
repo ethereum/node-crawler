@@ -142,6 +142,9 @@ func (a *Api) cachedOrQuery(query string, whereArgs []interface{}) []client {
 }
 
 func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
+	// Set's the cache to 10 minutes, which matches the same as the crawler.
+	rw.Header().Set("Cache-Control", "max-age=600")
+	
 	vars := mux.Vars(r)
 
 	nameCountInQuery := strings.Count(vars["filter"], "\"name:")
@@ -152,7 +155,6 @@ func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 		return
 	}
-
 	if whereArgs != nil {
 		where = "WHERE " + where
 	}

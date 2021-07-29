@@ -1,4 +1,4 @@
-import { Grid, GridItem, useColorModeValue, Thead, Tbody, Tr, Box, Text, Center } from "@chakra-ui/react";
+import { Grid, GridItem, useColorModeValue, Thead, Tbody, Tr, Box, Center } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { ResponsiveContainer, Cell, Pie, PieChart } from "recharts";
 import { Card } from "../atoms/Card";
