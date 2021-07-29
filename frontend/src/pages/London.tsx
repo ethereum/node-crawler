@@ -1,4 +1,4 @@
-import { Grid, GridItem, useColorModeValue, Thead, Tbody, Tr, Box } from "@chakra-ui/react";
+import { Grid, GridItem, useColorModeValue, Thead, Tbody, Tr, Box, Text, Center } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { ResponsiveContainer, Cell, Pie, PieChart } from "recharts";
 import { Card } from "../atoms/Card";
@@ -32,6 +32,10 @@ interface ClientData {
 type NamedCountMap = { [name: string]: NamedCount }
 
 function convertListToMap(list: NamedCount[]): NamedCountMap {
+  if (!list) {
+    return {}
+  }
+
   return list.reduce((map: NamedCountMap, item) => {
     map[normalizeClientNames[item.name] || item.name] = item;
     return map;
@@ -125,86 +129,95 @@ export function London() {
         </Box>
       </Card>
       <Card title="London Client Distribution" w="99%" contentHeight={300}>
-        <ResponsiveContainer height={300}>
-          <PieChart>
-            <Pie
-              data={data.distribution}
-              stroke="none"
-              dataKey="count"
-              startAngle={180}
-              endAngle={-180}
-              minAngle={20}
-              outerRadius={100}
-              label={renderLabelContent}
-              isAnimationActive={false}
-            >
-              {
-                data.distribution.map((entry, index) => (
-                  <Cell
-                    key={`slice-${index}`}
-                    fill={entry.color}
-                  />
-                ))
-              }
-            </Pie>
-          </PieChart>
-        </ResponsiveContainer>
+        {!data.distribution && (<Center flex="1">No data</Center>)}
+        {data.distribution && (
+          <ResponsiveContainer height={300}>
+            <PieChart>
+              <Pie
+                data={data.distribution}
+                stroke="none"
+                dataKey="count"
+                startAngle={180}
+                endAngle={-180}
+                minAngle={20}
+                outerRadius={100}
+                label={renderLabelContent}
+                isAnimationActive={false}
+              >
+                {
+                  data.distribution.map((entry, index) => (
+                    <Cell
+                      key={`slice-${index}`}
+                      fill={entry.color}
+                    />
+                  ))
+                }
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        )}
       </Card>
 
       <Card title="London Operating Systems" w="99%" contentHeight={300}>
-        <ResponsiveContainer height={300}>
-          <PieChart>
-            <Pie
-              data={data.operatingSystems}
-              dataKey="count"
-              startAngle={180}
-              endAngle={-180}
-              innerRadius={30}
-              outerRadius={100}
-              paddingAngle={data.operatingSystems.length === 1 ? 0 : 10}
-              minAngle={data.operatingSystems.length === 1 ? 0 : 20}
-              label={renderLabelContent}
-              isAnimationActive={false}
-            >
-              {
-                data.operatingSystems.map((entry, index) => (
-                  <Cell
-                    key={`slice-${index}`}
-                    fill={colors[index % 10] as string}
-                  />
-                ))
-              }
-            </Pie>
-          </PieChart>
-        </ResponsiveContainer>
+        {!data.operatingSystems && (<Center flex="1">No data</Center>)}
+        {data.operatingSystems && (
+          <ResponsiveContainer height={300}>
+            <PieChart>
+              <Pie
+                data={data.operatingSystems}
+                dataKey="count"
+                startAngle={180}
+                endAngle={-180}
+                innerRadius={30}
+                outerRadius={100}
+                paddingAngle={data.operatingSystems.length === 1 ? 0 : 10}
+                minAngle={data.operatingSystems.length === 1 ? 0 : 20}
+                label={renderLabelContent}
+                isAnimationActive={false}
+              >
+                {
+                  data.operatingSystems.map((entry, index) => (
+                    <Cell
+                      key={`slice-${index}`}
+                      fill={colors[index % 10] as string}
+                    />
+                  ))
+                }
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        )}
       </Card>
 
       <Card title="London Runtimes" w="99%" contentHeight={300}>
-        <ResponsiveContainer height={300}>
-          <PieChart>
-            <Pie
-              data={data.languages}
-              dataKey="count"
-              startAngle={180}
-              endAngle={-180}
-              innerRadius={30}
-              outerRadius={100}
-              paddingAngle={data.languages.length === 1 ? 0 : 10}
-              minAngle={data.languages.length === 1 ? 0 : 20}
-              label={renderLabelContent}
-              isAnimationActive={false}
-            >
-              {
-                data.languages.map((entry, index) => (
-                  <Cell
-                    key={`slice-${index}`}
-                    fill={colors[index % 10] as string}
-                  />
-                ))
-              }
-            </Pie>
-          </PieChart>
-        </ResponsiveContainer>
+        {!data.languages && (<Center flex="1">No data</Center>)}
+        {data.languages && (
+          <ResponsiveContainer height={300}>
+            <PieChart>
+              <Pie
+                data={data.languages}
+                dataKey="count"
+                startAngle={180}
+                endAngle={-180}
+                innerRadius={30}
+                outerRadius={100}
+                paddingAngle={data.languages.length === 1 ? 0 : 10}
+                minAngle={data.languages.length === 1 ? 0 : 20}
+                label={renderLabelContent}
+                isAnimationActive={false}
+              >
+                {
+                  data.languages.map((entry, index) => (
+                    <Cell
+                      key={`slice-${index}`}
+                      fill={colors[index % 10] as string}
+                    />
+                  ))
+                }
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        )}
       </Card>
     </Grid>
   )
