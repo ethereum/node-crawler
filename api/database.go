@@ -50,6 +50,8 @@ func InsertCrawledNodes(db *sql.DB, crawledNodes []input.CrawledNode) error {
 		return err
 	}
 
+       crawledNodes = distinctNodes(crawledNodes)
+
 	for _, node := range crawledNodes {
 		parsed := parser.ParseVersionString(node.ClientType)
 		_, err = stmt.Exec(
@@ -68,4 +70,20 @@ func InsertCrawledNodes(db *sql.DB, crawledNodes []input.CrawledNode) error {
 		)
 	}
 	return tx.Commit()
+}
+
+func distinctNodes(nodes []input.CrawledNode) []input.CrawledNode {
+       var res []input.CrawledNode
+       for _, node := range nodes {
+               newest := node
+               for _, node2 := range nodes {
+                       if node.ID == node2.ID {
+                               if node2.Now > newest.Now {
+                                       newest = node2
+                               }
+                       }
+               }
+               res = append(res, newest)
+       }
+       return res
 }
