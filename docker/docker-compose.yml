@@ -5,7 +5,7 @@ services:
     build: ./crawler
     volumes:
      - ./data:/data
-    command: "crawl --timeout 10m --table /data/"
+    command: "crawl --timeout 10m --table /data/crawler.db"
   
   api:
     build: ./api
@@ -14,7 +14,7 @@ services:
      - ./data:/data
     depends_on:
      - crawler
-    command: "--crawler-db-path /data/nodetable --api-db-path /data/nodes"
+    command: "--crawler-db-path /data/crawler.db --api-db-path /data/api.db"
 
   frontend:
     build: ./web
