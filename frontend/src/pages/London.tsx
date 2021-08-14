@@ -1,7 +1,8 @@
 import { Grid, GridItem, useColorModeValue, Thead, Tbody, Tr, Box, Center } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
-import { ResponsiveContainer, Cell, Pie, PieChart } from "recharts";
+import { Cell, Pie, PieChart } from "recharts";
 import { Card } from "../atoms/Card";
+import { CustomResponsiveContainer } from "../atoms/CustomResponsiveContainer";
 import { TablePlus, TdPlus, ThPlus } from "../atoms/TablePlus";
 import { londonFilterString, knownNodesFilterString, normalizeClientNames, londonFilter, colors, LayoutEightPadding, LayoutTwoColSpan, LayoutTwoColumn } from "../config";
 import { Filtering } from "../organisms/Filtering";
@@ -131,7 +132,7 @@ export function London() {
       <Card title="London Client Distribution" w="99%" contentHeight={300}>
         {!data.distribution && (<Center flex="1">No data</Center>)}
         {data.distribution && (
-          <ResponsiveContainer height={300}>
+          <CustomResponsiveContainer height={300}>
             <PieChart>
               <Pie
                 data={data.distribution}
@@ -154,14 +155,14 @@ export function London() {
                 }
               </Pie>
             </PieChart>
-          </ResponsiveContainer>
+          </CustomResponsiveContainer>
         )}
       </Card>
 
       <Card title="London Operating Systems" w="99%" contentHeight={300}>
         {!data.operatingSystems && (<Center flex="1">No data</Center>)}
         {data.operatingSystems && (
-          <ResponsiveContainer height={300}>
+          <CustomResponsiveContainer height={300}>
             <PieChart>
               <Pie
                 data={data.operatingSystems}
@@ -185,14 +186,14 @@ export function London() {
                 }
               </Pie>
             </PieChart>
-          </ResponsiveContainer>
+          </CustomResponsiveContainer>
         )}
       </Card>
 
       <Card title="London Runtimes" w="99%" contentHeight={300}>
         {!data.languages && (<Center flex="1">No data</Center>)}
         {data.languages && (
-          <ResponsiveContainer height={300}>
+          <CustomResponsiveContainer height={300}>
             <PieChart>
               <Pie
                 data={data.languages}
@@ -216,7 +217,7 @@ export function London() {
                 }
               </Pie>
             </PieChart>
-          </ResponsiveContainer>
+          </CustomResponsiveContainer>
         )}
       </Card>
     </Grid>

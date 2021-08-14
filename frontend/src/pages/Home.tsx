@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
  import { useHistory, useLocation } from 'react-router-dom';
 import {
   PieChart, Pie, Cell, Tooltip, 
-  LabelList, Bar, BarChart, XAxis, YAxis, ResponsiveContainer
+  LabelList, Bar, BarChart, XAxis, YAxis
 } from 'recharts';
 
 import { scaleOrdinal } from 'd3-scale';
@@ -16,6 +16,7 @@ import { drilldownFilter, filterCount, FilterGroup, generateFilterGroupsFromQuer
 import { Filtering } from '../organisms/Filtering';
 import { Loader } from '../organisms/Loader';
 import { knownNodesFilter, LayoutEightPadding, LayoutTwoColSpan, LayoutTwoColumn } from '../config';
+import { CustomResponsiveContainer } from '../atoms/CustomResponsiveContainer';
 
 const colors = scaleOrdinal(schemeCategory10).range();
 
@@ -135,7 +136,7 @@ function Home() {
       </GridItem>
       <GridItem colSpan={LayoutTwoColSpan}>
         <Card title={barChartTitle} w="99%" contentHeight={barChartData.length * 40}>
-          <ResponsiveContainer height={barChartData.length * 40}>
+          <CustomResponsiveContainer height={barChartData.length * 40}>
             <BarChart
               data={barChartData}
               layout="vertical"
@@ -152,12 +153,12 @@ function Home() {
                 <LabelList position="right" />
               </Bar>
             </BarChart>
-          </ResponsiveContainer>
+          </CustomResponsiveContainer>
         </Card>
       </GridItem>
 
       <Card title="Popular Operating Systems" w="99%" contentHeight={300}>
-        <ResponsiveContainer height={300}>
+        <CustomResponsiveContainer height={300}>
           <PieChart>
             <Pie
               data={data.operatingSystems}
@@ -182,11 +183,11 @@ function Home() {
               }
             </Pie>
           </PieChart>
-        </ResponsiveContainer>
+        </CustomResponsiveContainer>
       </Card>
 
       <Card title="Popular Client Runtimes" w="99%" contentHeight={300}>
-        <ResponsiveContainer height={300}>
+        <CustomResponsiveContainer height={300}>
           <PieChart>
             <Pie
               data={data.languages}
@@ -210,7 +211,7 @@ function Home() {
               }
             </Pie>
           </PieChart>
-        </ResponsiveContainer>
+        </CustomResponsiveContainer>
       </Card>
     </Grid>
   );
