@@ -1,7 +1,6 @@
-import { Alert, AlertIcon, Button, Flex, Grid, GridItem, HStack, Link, Spacer, Text} from "@chakra-ui/react";
+import { Alert, AlertIcon, Button, Flex, Grid, GridItem, HStack, Spacer, Text} from "@chakra-ui/react";
 import { useState } from "react";
 import { VscClose } from "react-icons/vsc";
-import { Link as ReactLink } from "react-router-dom"
 import { Logo } from "../atoms/Logo";
 import { LayoutEightPadding } from "../config";
 import { ColorModeSwitcher } from "./ColorModeSwitcher";
@@ -34,10 +33,6 @@ export function Header() {
         <HStack>
           <Logo h="32px" pointerEvents="none" />
           <Text fontWeight="bold" fontSize="larger" whiteSpace="nowrap">Ethereum Nodes</Text>
-        </HStack>
-        <HStack pl={10} gridGap={4}>
-          <Link as={ReactLink} to="/">Home</Link>
-          <Link as={ReactLink} to="/london">London</Link>
         </HStack>
       </Flex>
       <ColorModeSwitcher justifySelf="flex-end" />
