@@ -17,9 +17,8 @@
     "react-icons": "^4.2.0",
     "react-router-dom": "^5.2.0",
     "react-scripts": "4.0.3",
-    "recharts": "^2.1.0",
-    "string.prototype.matchall": "^4.0.5",
-    "typescript": "^4.3.5"
+    "recharts": "2.0.10",
+    "string.prototype.matchall": "^4.0.5"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -50,11 +49,12 @@
     "@types/d3-scale-chromatic": "^3.0.0",
     "@types/jest": "^27.0.1",
     "@types/node": "^16.6.1",
-    "@types/react": "^17.0.17",
+    "@types/react": "^17.0.18",
     "@types/react-dom": "^17.0.9",
     "@types/react-router-dom": "^5.1.8",
     "@types/string.prototype.matchall": "^4.0.0",
     "node-cron": "^3.0.0",
-    "node-fetch": "^2.6.1"
+    "node-fetch": "^2.6.1",
+    "typescript": "^4.3.5"
   }
 }

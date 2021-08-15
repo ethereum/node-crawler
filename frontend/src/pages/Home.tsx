@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
- import { useHistory, useLocation } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import {
-  PieChart, Pie, Cell, Tooltip, 
+  PieChart, Pie, Cell, Tooltip,
   LabelList, Bar, BarChart, XAxis, YAxis
 } from 'recharts';
 
@@ -52,7 +52,7 @@ function Home() {
         console.error(e);
       }
     }
-    
+
     if (filterCount(searchFilters) === 0) {
       // Deep clone since we are mutating it.
       searchFilters = JSON.parse(JSON.stringify(knownNodesFilter));
@@ -111,13 +111,13 @@ function Home() {
       </g>
     );
   };
-  
+
   const renderTooltipContent = (props: any): any => {
     if (!props.active || !props.payload || !props.payload.length) {
       return null
     }
-    
-    const { payload: {name, count}} = props.payload[0]
+
+    const { payload: { name, count } } = props.payload[0]
     return (
       <TooltipCard>
         <Text fontWeight="bold">{name}</Text>
@@ -134,9 +134,10 @@ function Home() {
       <GridItem colSpan={LayoutTwoColSpan}>
         <Filtering filters={filters} onFiltersChange={onFiltersChanged} />
       </GridItem>
+
       <GridItem colSpan={LayoutTwoColSpan}>
-        <Card title={barChartTitle} w="99%" contentHeight={barChartData.length * 40}>
-          <CustomResponsiveContainer height={barChartData.length * 40}>
+        <Card title={barChartTitle} contentHeight={barChartData.length * 40}>
+          <CustomResponsiveContainer>
             <BarChart
               data={barChartData}
               layout="vertical"
@@ -145,7 +146,7 @@ function Home() {
             >
               <XAxis type="number" hide stroke={color} />
               <YAxis dataKey="name" type="category" interval={0} stroke={color} />
-              <Tooltip cursor={false} content={renderTooltipContent}/>
+              <Tooltip cursor={false} content={renderTooltipContent} />
               <Bar dataKey="count">
                 {barChartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={colors[index % 10]} />
@@ -157,8 +158,8 @@ function Home() {
         </Card>
       </GridItem>
 
-      <Card title="Popular Operating Systems" w="99%" contentHeight={300}>
-        <CustomResponsiveContainer height={300}>
+      <Card title="Popular Operating Systems" contentHeight={300}>
+        <CustomResponsiveContainer>
           <PieChart>
             <Pie
               data={data.operatingSystems}
@@ -172,6 +173,7 @@ function Home() {
               label={renderLabelContent}
               isAnimationActive={false}
               onClick={onOperatingSystemClicked}
+              stroke="none"
             >
               {
                 data.operatingSystems.map((entry, index) => (
@@ -186,8 +188,8 @@ function Home() {
         </CustomResponsiveContainer>
       </Card>
 
-      <Card title="Popular Client Runtimes" w="99%" contentHeight={300}>
-        <CustomResponsiveContainer height={300}>
+      <Card title="Popular Client Runtimes" contentHeight={300}>
+        <CustomResponsiveContainer>
           <PieChart>
             <Pie
               data={data.languages}
@@ -200,6 +202,7 @@ function Home() {
               minAngle={data.languages.length === 1 ? 0 : 20}
               label={renderLabelContent}
               isAnimationActive={false}
+              stroke="none"
             >
               {
                 data.languages.map((entry, index) => (

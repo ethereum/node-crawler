@@ -22,6 +22,7 @@ export const theme = extendTheme({
         px: "2",
         py: "3",
         rounded: "md",
+        h: "100%",
       })
     },
     TablePlus: {
