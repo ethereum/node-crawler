@@ -127,9 +127,9 @@ type result struct {
 	Versions         []client `json:"versions"`
 }
 
-func (a *Api) cachedOrQuery(query string, whereArgs []interface{}) []client {
+func (a *Api) cachedOrQuery(prefix, query string, whereArgs []interface{}) []client {
 	var result []client
-	if cl, ok := a.cache.Get(query); ok {
+	if cl, ok := a.cache.Get(prefix + toQuery(query, whereArgs)); ok {
 		result = cl.([]client)
 	} else {
 		var err error
@@ -141,10 +141,30 @@ func (a *Api) cachedOrQuery(query string, whereArgs []interface{}) []client {
 	return result
 }
 
+func toQuery(query string, whereArgs []interface{}) string {
+	var res string
+	queryParts := strings.Split(query, "?")
+	for idx, s := range queryParts {
+		res += s
+		if idx == len(whereArgs) {
+			break
+		}
+		res += whereArgs[idx].(string)
+	}
+	return res
+}
+
+func (a *Api) storeCache(clientQuery, languageQuery, osQuery, versionQuery string, whereArgs []interface{}, r result) {
+	a.cache.Add("c"+toQuery(clientQuery, whereArgs), r.Clients)
+	a.cache.Add("l"+toQuery(languageQuery, whereArgs), r.Languages)
+	a.cache.Add("o"+toQuery(osQuery, whereArgs), r.OperatingSystems)
+	a.cache.Add("v"+toQuery(versionQuery, whereArgs), r.Versions)
+}
+
 func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 	// Set's the cache to 10 minutes, which matches the same as the crawler.
 	rw.Header().Set("Cache-Control", "max-age=600")
-	
+
 	vars := mux.Vars(r)
 
 	nameCountInQuery := strings.Count(vars["filter"], "\"name:")
@@ -170,19 +190,16 @@ func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 	topOsQuery := fmt.Sprintf("SELECT os_name as Name, COUNT(os_name) as Count FROM nodes %v GROUP BY os_name ORDER BY count DESC", where)
 	topVersionQuery := fmt.Sprintf("SELECT Name, Count(*) as Count FROM (SELECT version_major || '.' || version_minor || '.' || version_patch as Name FROM nodes %v) GROUP BY Name ORDER BY Count DESC ", where)
 
-	clients := a.cachedOrQuery(topClientsQuery, whereArgs)
-	language := a.cachedOrQuery(topLanguageQuery, whereArgs)
-	operatingSystems := a.cachedOrQuery(topOsQuery, whereArgs)
+	clients := a.cachedOrQuery("c", topClientsQuery, whereArgs)
+	language := a.cachedOrQuery("l", topLanguageQuery, whereArgs)
+	operatingSystems := a.cachedOrQuery("o", topOsQuery, whereArgs)
 	var versions []client
 	if nameCountInQuery == 1 {
-		versions = a.cachedOrQuery(topVersionQuery, whereArgs)
+		versions = a.cachedOrQuery("t", topVersionQuery, whereArgs)
 	}
 
 	res := result{Clients: clients, Languages: language, OperatingSystems: operatingSystems, Versions: versions}
-	a.cache.Add(topClientsQuery, clients)
-	a.cache.Add(topLanguageQuery, language)
-	a.cache.Add(topOsQuery, operatingSystems)
-	a.cache.Add(topVersionQuery, versions)
+	a.storeCache(topClientsQuery, topLanguageQuery, topOsQuery, topVersionQuery, whereArgs, res)
 	json.NewEncoder(rw).Encode(res)
 }
 
