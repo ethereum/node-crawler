@@ -195,7 +195,7 @@ func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 	operatingSystems := a.cachedOrQuery("o", topOsQuery, whereArgs)
 	var versions []client
 	if nameCountInQuery == 1 {
-		versions = a.cachedOrQuery("t", topVersionQuery, whereArgs)
+		versions = a.cachedOrQuery("v", topVersionQuery, whereArgs)
 	}
 
 	res := result{Clients: clients, Languages: language, OperatingSystems: operatingSystems, Versions: versions}
