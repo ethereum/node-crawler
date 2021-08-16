@@ -8,7 +8,7 @@ import {
 import { scaleOrdinal } from 'd3-scale';
 import { schemeCategory10 } from 'd3-scale-chromatic';
 
-import { Grid, GridItem, useColorModeValue, Text } from '@chakra-ui/react';
+import { Grid, GridItem, useColorModeValue, Text, Center } from '@chakra-ui/react';
 import { Card } from '../atoms/Card';
 import { TooltipCard } from '../atoms/TooltipCard';
 import { appendOtherGroup } from '../data/DataMassager';
@@ -137,84 +137,100 @@ function Home() {
 
       <GridItem colSpan={LayoutTwoColSpan}>
         <Card title={barChartTitle} contentHeight={barChartData.length * 40}>
-          <CustomResponsiveContainer>
-            <BarChart
-              data={barChartData}
-              layout="vertical"
-              margin={{ left: 60, right: 30 }}
-              onClick={data.versions.length ? onVersionClicked : onClientClicked}
-            >
-              <XAxis type="number" hide stroke={color} />
-              <YAxis dataKey="name" type="category" interval={0} stroke={color} />
-              <Tooltip cursor={false} content={renderTooltipContent} />
-              <Bar dataKey="count">
-                {barChartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={colors[index % 10]} />
-                ))}
-                <LabelList position="right" />
-              </Bar>
-            </BarChart>
-          </CustomResponsiveContainer>
+          {barChartData.length === 0 && (
+            <Center flex={1}>No data available</Center>
+          )}
+          {barChartData.length > 0 && (
+            <CustomResponsiveContainer>
+              <BarChart
+                data={barChartData}
+                layout="vertical"
+                margin={{ left: 60, right: 30 }}
+                onClick={data.versions.length ? onVersionClicked : onClientClicked}
+              >
+                <XAxis type="number" hide stroke={color} />
+                <YAxis dataKey="name" type="category" interval={0} stroke={color} />
+                <Tooltip cursor={false} content={renderTooltipContent} />
+                <Bar dataKey="count">
+                  {barChartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={colors[index % 10]} />
+                  ))}
+                  <LabelList position="right" />
+                </Bar>
+              </BarChart>
+            </CustomResponsiveContainer>
+          )}
         </Card>
       </GridItem>
 
       <Card title="Popular Operating Systems" contentHeight={300}>
-        <CustomResponsiveContainer>
-          <PieChart>
-            <Pie
-              data={data.operatingSystems}
-              dataKey="count"
-              startAngle={180}
-              endAngle={-180}
-              innerRadius={30}
-              outerRadius={100}
-              paddingAngle={data.operatingSystems.length === 1 ? 0 : 10}
-              minAngle={data.operatingSystems.length === 1 ? 0 : 20}
-              label={renderLabelContent}
-              isAnimationActive={false}
-              onClick={onOperatingSystemClicked}
-              stroke="none"
-            >
-              {
-                data.operatingSystems.map((entry, index) => (
-                  <Cell
-                    key={`slice-${index}`}
-                    fill={colors[index % 10] as string}
-                  />
-                ))
-              }
-            </Pie>
-          </PieChart>
-        </CustomResponsiveContainer>
+        {data.operatingSystems.length === 0 && (
+          <Center flex={1}>No data available</Center>
+        )}
+        {data.operatingSystems.length > 0 && (
+          <CustomResponsiveContainer>
+            <PieChart>
+              <Pie
+                data={data.operatingSystems}
+                dataKey="count"
+                startAngle={180}
+                endAngle={-180}
+                innerRadius={30}
+                outerRadius={100}
+                paddingAngle={data.operatingSystems.length === 1 ? 0 : 10}
+                minAngle={data.operatingSystems.length === 1 ? 0 : 20}
+                label={renderLabelContent}
+                isAnimationActive={false}
+                onClick={onOperatingSystemClicked}
+                stroke="none"
+              >
+                {
+                  data.operatingSystems.map((entry, index) => (
+                    <Cell
+                      key={`slice-${index}`}
+                      fill={colors[index % 10] as string}
+                    />
+                  ))
+                }
+              </Pie>
+            </PieChart>
+          </CustomResponsiveContainer>
+        )}
+
       </Card>
 
       <Card title="Popular Client Runtimes" contentHeight={300}>
-        <CustomResponsiveContainer>
-          <PieChart>
-            <Pie
-              data={data.languages}
-              dataKey="count"
-              startAngle={180}
-              endAngle={-180}
-              innerRadius={30}
-              outerRadius={100}
-              paddingAngle={data.languages.length === 1 ? 0 : 10}
-              minAngle={data.languages.length === 1 ? 0 : 20}
-              label={renderLabelContent}
-              isAnimationActive={false}
-              stroke="none"
-            >
-              {
-                data.languages.map((entry, index) => (
-                  <Cell
-                    key={`slice-${index}`}
-                    fill={colors[index % 10] as string}
-                  />
-                ))
-              }
-            </Pie>
-          </PieChart>
-        </CustomResponsiveContainer>
+        {data.languages.length === 0 && (
+          <Center flex={1}>No data available</Center>
+        )}
+        {data.languages.length > 0 && (
+          <CustomResponsiveContainer>
+            <PieChart>
+              <Pie
+                data={data.languages}
+                dataKey="count"
+                startAngle={180}
+                endAngle={-180}
+                innerRadius={30}
+                outerRadius={100}
+                paddingAngle={data.languages.length === 1 ? 0 : 10}
+                minAngle={data.languages.length === 1 ? 0 : 20}
+                label={renderLabelContent}
+                isAnimationActive={false}
+                stroke="none"
+              >
+                {
+                  data.languages.map((entry, index) => (
+                    <Cell
+                      key={`slice-${index}`}
+                      fill={colors[index % 10] as string}
+                    />
+                  ))
+                }
+              </Pie>
+            </PieChart>
+          </CustomResponsiveContainer>
+        )}
       </Card>
     </Grid>
   );
