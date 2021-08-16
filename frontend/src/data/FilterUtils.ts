@@ -167,6 +167,9 @@ export const drilldownFilter = (filters: FilterGroup[] | undefined, name: string
     newFilters.push([{name, value: value}])
   } else {
     newFilters.forEach(filterGroup => {
+      if (value === 'Other') {
+        return
+      }
       if (name === 'version') {
         const versions = value.split('.')
         if (versions.length >= 1) {
