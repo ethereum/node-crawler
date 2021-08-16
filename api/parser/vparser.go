@@ -120,25 +120,25 @@ func parseVersion(input string) Version {
 }
 
 func parseVersionNumber(input string) (int, int, int) {
-		// Version
-		trimmed := strings.TrimLeft(input, "v")
-		vSplit := strings.Split(trimmed, ".")
-		var major, minor, patch int
+	// Version
+	trimmed := strings.TrimLeft(input, "v")
+	vSplit := strings.Split(trimmed, ".")
+	var major, minor, patch int
 
-		switch len(vSplit) {
-		case 4:
-			fallthrough
-		case 3:
-			patch, _ = strconv.Atoi(vSplit[2])
-			fallthrough
-		case 2:
-			minor, _ = strconv.Atoi(vSplit[1])
-			fallthrough
-		case 1:
-			major, _ = strconv.Atoi(vSplit[0])
-		}
+	switch len(vSplit) {
+	case 4:
+		fallthrough
+	case 3:
+		patch, _ = strconv.Atoi(vSplit[2])
+		fallthrough
+	case 2:
+		minor, _ = strconv.Atoi(vSplit[1])
+		fallthrough
+	case 1:
+		major, _ = strconv.Atoi(vSplit[0])
+	}
 
-		return major, minor, patch
+	return major, minor, patch
 }
 
 func parseOS(input string) OSInfo {
