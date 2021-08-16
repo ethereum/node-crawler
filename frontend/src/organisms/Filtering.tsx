@@ -9,7 +9,7 @@ interface EditableProps extends StackProps {
   editMode?: boolean
   showRemoveButton?: boolean
   cachedNames: CachedNameMap
-  onRemoveClicked?: () => void
+  onRemoveClicked?: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void
   onSaveClicked: (item: FilterItem) => void
 }
 
@@ -70,7 +70,7 @@ const EditableInput: React.FC<EditableProps> = forwardRef<EditableProps, 'div'>(
         <Input size="xs" value={editItem.value} onChange={(e) => setEditItem(item => ({ ...item, value: e.target.value }))} />
         <HStack>
           <Button variant="ghost" iconSpacing={0} size="sm" leftIcon={<VscRemove />} title="Cancel editing" onClick={() => setEditing(false)} />
-          {showRemoveButton && (<Button variant="ghost" iconSpacing={0} size="sm" leftIcon={<VscClose />} title="Remove condition" onClick={() => onRemoveClicked && onRemoveClicked()} />)}
+          {showRemoveButton && (<Button variant="ghost" iconSpacing={0} size="sm" leftIcon={<VscClose />} title="Remove condition" onClick={(e) => onRemoveClicked && onRemoveClicked(e)} />)}
           <Button variant="ghost" isDisabled={editItem.value === ''} iconSpacing={0} size="sm" leftIcon={<VscCheck />} title="Save condition" onClick={() => onInternalSaveClicked()} />
         </HStack>
       </VStack>
@@ -82,7 +82,7 @@ const EditableInput: React.FC<EditableProps> = forwardRef<EditableProps, 'div'>(
       <Text fontWeight="bold">{editItem.name}</Text>
       {editItem.operator && (<Text>{FilterOperatorToSymbol[editItem.operator]}</Text>)}
       <Text>{editItem.value}</Text>
-      {onRemoveClicked && (<Button variant="ghost" iconSpacing={0} size="sm" leftIcon={<VscClose />} title="Remove condition" onClick={() => onRemoveClicked()} />)}
+      {onRemoveClicked && (<Button variant="ghost" iconSpacing={0} size="sm" leftIcon={<VscClose />} title="Remove condition" onClick={(e) => onRemoveClicked(e)} />)}
     </HStack>
   )
 })
@@ -133,7 +133,9 @@ function FilterGroupItem(props: FilterGroupItemProps) {
     saveFilter(groupIndex, filterIndex, item)
   }
 
-  const onRemoveClicked = (groupIndex: number, filterIndex: number, item: FilterItem) => {
+  const onRemoveClicked = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>, groupIndex: number, filterIndex: number, item: FilterItem) => {
+    e.stopPropagation();
+
     setAllowedNamesMap(names => {
       if (item)
         names[item.name] = true
@@ -151,7 +153,7 @@ function FilterGroupItem(props: FilterGroupItemProps) {
             borderColor={color}
             item={filter}
             editMode={filter === undefined}
-            onRemoveClicked={onFiltersChange && (() => onRemoveClicked(groupIndex, filterIndex, filter))}
+            onRemoveClicked={onFiltersChange && ((e) => onRemoveClicked(e, groupIndex, filterIndex, filter))}
             onSaveClicked={(item: FilterItem) => onSaveClicked(groupIndex, filterIndex, item)}
             showRemoveButton={filterGroup.length > 1}
           />
