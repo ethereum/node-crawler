@@ -67,6 +67,7 @@ func deamon(wg *sync.WaitGroup, crawlerDB, nodeDB *sql.DB) {
 			if err != nil {
 				fmt.Printf("Error inserting nodes: %v\n", err)
 			}
+			fmt.Printf("%d nodes inserted\n", len(nodes))
 		}
 		time.Sleep(time.Second)
 	}
