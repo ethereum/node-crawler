@@ -16,12 +16,12 @@ import (
 
 var (
 	crawlerDBPath = flag.String("crawler-db-path", "nodetable", "Crawler Database SQLite Path")
-	apiDBPath = flag.String("api-db-path", "nodes", "API Database SQLite Path")
+	apiDBPath     = flag.String("api-db-path", "nodes", "API Database SQLite Path")
 )
 
 func main() {
 	flag.Parse()
-	
+
 	crawlerDB, err := sql.Open("sqlite3", *crawlerDBPath)
 	if err != nil {
 		panic(err)

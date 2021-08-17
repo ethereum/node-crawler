@@ -45,12 +45,24 @@ func InsertCrawledNodes(db *sql.DB, crawledNodes []input.CrawledNode) error {
 			version_major, version_minor, version_patch, version_tag, version_build, version_date, 
 			os_name, os_architecture, 
 			language_name, language_version) 
-			values(?,?,?,?,?,?,?,?,?,?,?,?)`)
+			values(?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(ID) DO UPDATE SET 
+			name=excluded.name,
+			version_major=excluded.version_major,
+			version_minor=excluded.version_minor,
+			version_patch=excluded.version_patch,
+			version_tag=excluded.version_tag,
+			version_build=excluded.version_build,
+			version_date=excluded.version_date,
+			os_name=excluded.os_name,
+			os_architecture=excluded.os_architecture,
+			language_name=excluded.language_name,
+			language_version=excluded.language_version
+			WHERE name=excluded.name OR excluded.name != "unknown"`)
 	if err != nil {
 		return err
 	}
 
-       crawledNodes = distinctNodes(crawledNodes)
+	crawledNodes = distinctNodes(crawledNodes)
 
 	for _, node := range crawledNodes {
 		parsed := parser.ParseVersionString(node.ClientType)
@@ -73,17 +85,17 @@ func InsertCrawledNodes(db *sql.DB, crawledNodes []input.CrawledNode) error {
 }
 
 func distinctNodes(nodes []input.CrawledNode) []input.CrawledNode {
-       var res []input.CrawledNode
-       for _, node := range nodes {
-               newest := node
-               for _, node2 := range nodes {
-                       if node.ID == node2.ID {
-                               if node2.Now > newest.Now {
-                                       newest = node2
-                               }
-                       }
-               }
-               res = append(res, newest)
-       }
-       return res
+	var res []input.CrawledNode
+	for _, node := range nodes {
+		newest := node
+		for _, node2 := range nodes {
+			if node.ID == node2.ID {
+				if node2.Now > newest.Now {
+					newest = node2
+				}
+			}
+		}
+		res = append(res, newest)
+	}
+	return res
 }
