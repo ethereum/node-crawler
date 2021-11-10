@@ -119,7 +119,7 @@ Production build of preconfigured software stack can be easily deployed with Doc
 ```
 cd docker
 ```
-Make sure you have [Docker](https://github.com/docker/docker-ce/releases) and [docker-compose] (https://github.com/docker/compose/releases) tools installed. 
+Make sure you have [Docker](https://github.com/docker/docker-ce/releases) and [docker-compose](https://github.com/docker/compose/releases) tools installed. 
 ```
 docker-compose up
 ```
