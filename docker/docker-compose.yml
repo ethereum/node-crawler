@@ -21,6 +21,7 @@ services:
     network_mode: "host"
     volumes:
      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+     - ./data:/data
     depends_on:
      - api
 
