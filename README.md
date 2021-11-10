@@ -1,13 +1,13 @@
 # Ethereum Node Crawler
 
-This repository includes frontend and API for Ethereum network crawler. Crawler used for discovering peers is part of `devp2p` tool from [go-ethereum](https://github.com/ethereum/go-ethereum) and is currently not included in this repository. 
+Crawls the network and visualizes collected data. This repository includes backend, API and frontend for Ethereum network crawler. 
 
-API software reads raw database of nodes data crawled from the network, filters it, caches and serves as API. Frontend is a web interface which reads data from the API and visualizes them as a dashboard. 
+[Backend](./crawler) is based on [devp2p](https://github.com/ethereum/go-ethereum/tree/master/cmd/devp2p) tool. It tries to connect to discovered nodes, fetches info about them and creates a database. [API](./api) software reads raw node database, filters it, caches and serves as API. [Frontend](./frontend) is a web application which reads data from the API and visualizes them as a dashboard. 
 
 Features:
 - Advanced filtering, allows you to add filters for a customized dashboard
 - Drilldown support, allows you to drill down the data to find interesting trends
-- Network upgrade readiness overview, currently supports predefined filters for London upgrade
+- Network upgrade readiness overview
 - Responsive mobile design 
 
 ## Contribute
@@ -65,11 +65,11 @@ go run ./ .
   ```
   go build ./ . -o /usr/bin/node-crawler-backend
   ```
-1. Move the database into `/etc/node-crawler-backend/nodetable`
-1. Create a systemd service in `/etc/systemd/system/node-crawler-backend.service`:
+2. Make sure database is in `/etc/node-crawler-backend/nodetable`
+3. Create a systemd service in `/etc/systemd/system/node-crawler-backend.service`:
    ```
    [Unit]
-   Description     = eth node crawler
+   Description     = eth node crawler api
    Wants           = network-online.target
    After           = network-online.target
 
@@ -83,13 +83,35 @@ go run ./ .
    [Install]
    WantedBy    = multi-user.target
    ```
-1. Then enable it and start it.
+4. Then enable it and start it.
    ```
    systemctl enable node-crawler-backend
    systemctl start node-crawler-backend
    systemctl status node-crawler-backend
    ```
+### Crawler
 
+#### Development
+
+Backend for crawling the network also requires golang installed.
+```
+cd crawler
+go run .
+```
+Run crawler using `crawl` command. 
+```
+go run . crawl
+```
+#### Production
+
+Build crawler and copy the binary to `/usr/bin`. 
+```
+go build -o /usr/bin/
+```
+Create a systemd service similarly to above API example. In executed command, override default settings by pointing crawler database to chosen path and setting period to write crawled nodes. 
+```
+crawler crawl --timeout 10m --table /path/to/database
+```
 ### Docker setup
 
 Production build of preconfigured software stack can be easily deployed with Docker. To achieve this, clone this repository and access `docker` directory. 
@@ -97,12 +119,10 @@ Production build of preconfigured software stack can be easily deployed with Doc
 ```
 cd docker
 ```
-Make sure you have Docker and Compose tool installed. 
+Make sure you have [Docker](https://github.com/docker/docker-ce/releases) and [docker-compose] (https://github.com/docker/compose/releases) tools installed. 
 ```
 docker-compose up
 ```
 
 
-### Crawler
-TBD
 
