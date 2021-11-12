@@ -194,12 +194,12 @@ func makeGenesis(ctx *cli.Context) *core.Genesis {
 
 func crawlRound(ctx *cli.Context, inputSet nodeSet, db *sql.DB, timeout time.Duration) nodeSet {
 	output := make(nodeSet)
-	log.Info("DiscV5")
 	v5 := discv5(ctx, nodeSet{}, timeout)
 	output.add(v5.nodes()...)
-	log.Info("DiscV4")
+	log.Info("DiscV5", "nodes", len(v5.nodes()))
 	v4 := discv4(ctx, nodeSet{}, timeout)
 	output.add(v4.nodes()...)
+	log.Info("DiscV4", "nodes", len(v4.nodes()))
 
 	genesis := makeGenesis(ctx)
 	if genesis == nil {

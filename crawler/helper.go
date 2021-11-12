@@ -25,13 +25,11 @@ func makeDiscoveryConfig(ctx *cli.Context) (*enode.LocalNode, discover.Config) {
 		cfg.PrivateKey, _ = crypto.GenerateKey()
 	}
 
-	if ctx.IsSet(bootnodesFlag.Name) {
-		bn, err := parseBootnodes(ctx)
-		if err != nil {
-			panic(err)
-		}
-		cfg.Bootnodes = bn
+	bn, err := parseBootnodes(ctx)
+	if err != nil {
+		panic(err)
 	}
+	cfg.Bootnodes = bn
 
 	dbpath := ctx.String(nodedbFlag.Name)
 	db, err := enode.OpenDB(dbpath)
