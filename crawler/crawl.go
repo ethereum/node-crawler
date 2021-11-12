@@ -84,7 +84,7 @@ loop:
 					timeoutCh = timeoutTimer.C
 				}
 			}
-			if liveIters--; liveIters == 0 {
+			if liveIters--; liveIters <= 0 {
 				break loop
 			}
 		case <-timeoutCh:

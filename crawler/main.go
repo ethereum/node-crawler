@@ -35,6 +35,10 @@ var (
 )
 
 func init() {
+	app.Flags = append(app.Flags, Flags...)
+	app.Before = func(ctx *cli.Context) error {
+		return Setup(ctx)
+	}
 	// Set up the CLI app.
 	app.CommandNotFound = func(ctx *cli.Context, cmd string) {
 		fmt.Fprintf(os.Stderr, "No such command: %s\n", cmd)
@@ -47,5 +51,8 @@ func init() {
 }
 
 func main() {
-	app.Run(os.Args)
+	err := app.Run(os.Args)
+	if err != nil {
+		panic(err)
+	}
 }

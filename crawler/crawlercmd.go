@@ -163,6 +163,7 @@ func discv5(ctx *cli.Context, inputSet nodeSet, timeout time.Duration) nodeSet {
 	disc := startV5(ctx)
 	defer disc.Close()
 	// Crawl the DHT for some time
+	fmt.Printf("%v\n", disc.RandomNodes().Next())
 	c := newCrawler(inputSet, disc, disc.RandomNodes())
 	c.revalidateInterval = 10 * time.Minute
 	return c.run(timeout)
@@ -172,6 +173,7 @@ func discv4(ctx *cli.Context, inputSet nodeSet, timeout time.Duration) nodeSet {
 	disc := startV4(ctx)
 	defer disc.Close()
 	// Crawl the DHT for some time
+	fmt.Printf("%v\n", disc.RandomNodes().Next())
 	c := newCrawler(inputSet, disc, disc.RandomNodes())
 	c.revalidateInterval = 10 * time.Minute
 	return c.run(timeout)
@@ -194,12 +196,12 @@ func makeGenesis(ctx *cli.Context) *core.Genesis {
 
 func crawlRound(ctx *cli.Context, inputSet nodeSet, db *sql.DB, timeout time.Duration) nodeSet {
 	output := make(nodeSet)
-	log.Info("DiscV5")
 	v5 := discv5(ctx, nodeSet{}, timeout)
 	output.add(v5.nodes()...)
-	log.Info("DiscV4")
+	log.Info("DiscV5", "nodes", len(v5.nodes()))
 	v4 := discv4(ctx, nodeSet{}, timeout)
 	output.add(v4.nodes()...)
+	log.Info("DiscV4", "nodes", len(v4.nodes()))
 
 	genesis := makeGenesis(ctx)
 	if genesis == nil {
