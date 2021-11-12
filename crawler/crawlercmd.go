@@ -163,7 +163,6 @@ func discv5(ctx *cli.Context, inputSet nodeSet, timeout time.Duration) nodeSet {
 	disc := startV5(ctx)
 	defer disc.Close()
 	// Crawl the DHT for some time
-	fmt.Printf("%v\n", disc.RandomNodes().Next())
 	c := newCrawler(inputSet, disc, disc.RandomNodes())
 	c.revalidateInterval = 10 * time.Minute
 	return c.run(timeout)
@@ -173,7 +172,6 @@ func discv4(ctx *cli.Context, inputSet nodeSet, timeout time.Duration) nodeSet {
 	disc := startV4(ctx)
 	defer disc.Close()
 	// Crawl the DHT for some time
-	fmt.Printf("%v\n", disc.RandomNodes().Next())
 	c := newCrawler(inputSet, disc, disc.RandomNodes())
 	c.revalidateInterval = 10 * time.Minute
 	return c.run(timeout)
