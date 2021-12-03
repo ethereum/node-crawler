@@ -17,6 +17,7 @@ import (
 var (
 	crawlerDBPath = flag.String("crawler-db-path", "nodetable", "Crawler Database SQLite Path")
 	apiDBPath     = flag.String("api-db-path", "nodes", "API Database SQLite Path")
+	dropNodesTime = flag.Duration("drop-time", 24*time.Hour, "Time to drop crawled nodes")
 )
 
 func main() {
@@ -76,11 +77,11 @@ func newNodeDeamon(wg *sync.WaitGroup, crawlerDB, nodeDB *sql.DB) {
 
 func dropDeamon(wg *sync.WaitGroup, db *sql.DB) {
 	defer wg.Done()
-	ticker := time.NewTicker(30 * time.Minute)
+	ticker := time.NewTicker(10 * time.Minute)
 	defer ticker.Stop()
 	for {
 		<-ticker.C
-		err := dropOldNodes(db, 24*time.Hour)
+		err := dropOldNodes(db, *dropNodesTime)
 		if err != nil {
 			panic(err)
 		}
