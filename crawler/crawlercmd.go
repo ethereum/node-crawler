@@ -127,22 +127,21 @@ func crawlNodes(ctx *cli.Context) error {
 
 	timeout := ctx.Duration(timeoutFlag.Name)
 
+	nodeDB, err := enode.OpenDB(ctx.String(nodedbFlag.Name))
+	if err != nil {
+		panic(err)
+	}
+
 	for {
-		inputSet = crawlRound(ctx, inputSet, db, timeout)
+		inputSet = crawlRound(ctx, inputSet, db, nodeDB, timeout)
 		if nodesFile := ctx.String(nodeFileFlag.Name); nodesFile != "" && common.FileExist(nodesFile) {
 			writeNodesJSON(nodesFile, inputSet)
 		}
 	}
 }
 
-func crawlRound(ctx *cli.Context, inputSet nodeSet, db *sql.DB, timeout time.Duration) nodeSet {
+func crawlRound(ctx *cli.Context, inputSet nodeSet, db *sql.DB, nodeDB *enode.DB, timeout time.Duration) nodeSet {
 	output := make(nodeSet)
-
-	dbpath := ctx.String(nodedbFlag.Name)
-	nodeDB, err := enode.OpenDB(dbpath)
-	if err != nil {
-		panic(err)
-	}
 
 	v5 := discv5(ctx, nodeDB, inputSet, timeout)
 	output.add(v5.nodes()...)
