@@ -18,6 +18,7 @@ package main
 
 import (
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/core"
@@ -43,6 +44,12 @@ type crawler struct {
 
 	// settings
 	revalidateInterval time.Duration
+
+	reqCh   chan *enode.Node
+	workers int
+
+	sync.WaitGroup
+	sync.RWMutex
 }
 
 type resolver interface {
@@ -61,6 +68,8 @@ func newCrawler(genesis *core.Genesis, networkID uint64, nodeURL string, input n
 		iters:     iters,
 		inputIter: enode.IterNodes(input.nodes()),
 		ch:        make(chan *enode.Node),
+		reqCh:     make(chan *enode.Node, 512), // TODO: define this in config
+		workers:   64,                          // TODO: define this in config
 		closed:    make(chan struct{}),
 	}
 	c.iters = append(c.iters, c.inputIter)
@@ -83,6 +92,11 @@ func (c *crawler) run(timeout time.Duration) nodeSet {
 
 	for _, it := range c.iters {
 		go c.runIterator(doneCh, it)
+	}
+
+	for i := 0; i < c.workers; i++ {
+		c.Add(1)
+		go c.getClientInfoLoop()
 	}
 
 loop:
@@ -113,6 +127,7 @@ loop:
 	for ; liveIters > 0; liveIters-- {
 		<-doneCh
 	}
+	c.Wait()
 
 	return c.output
 }
@@ -128,7 +143,56 @@ func (c *crawler) runIterator(done chan<- enode.Iterator, it enode.Iterator) {
 	}
 }
 
+func (c *crawler) getClientInfoLoop() {
+	defer func() {}()
+	for {
+		select {
+		case n := <-c.reqCh:
+			var tooManyPeers bool
+			var scoreInc int
+
+			info, err := getClientInfo(c.genesis, c.networkID, c.nodeURL, n)
+			if err != nil {
+				log.Warn("GetClientInfo failed", "error", err, "nodeID", n.ID())
+				if strings.Contains(err.Error(), "too many peers") {
+					tooManyPeers = true
+				}
+			} else {
+				scoreInc = 10
+			}
+
+			c.Lock()
+			node := c.output[n.ID()]
+			node.Info = info
+			node.TooManyPeers = tooManyPeers
+			node.Score += scoreInc
+			if info != nil {
+				log.Info(
+					"Updating node info",
+					"score", node.Score,
+					"client_type", node.Info.ClientType,
+					"version", node.Info.SoftwareVersion,
+					"network_id", node.Info.NetworkID,
+					"caps", node.Info.Capabilities,
+					"fork_id", node.Info.ForkID,
+					"height", node.Info.Blockheight,
+					"td", node.Info.TotalDifficulty,
+					"head", node.Info.HeadHash,
+				)
+			}
+			c.output[n.ID()] = node
+			c.Unlock()
+
+		case <-c.closed:
+			return
+		}
+	}
+}
+
 func (c *crawler) updateNode(n *enode.Node) {
+	c.Lock()
+	defer c.Unlock()
+
 	node, ok := c.output[n.ID()]
 
 	// Skip validation of recently-seen nodes.
@@ -157,16 +221,7 @@ func (c *crawler) updateNode(n *enode.Node) {
 		node.LastResponse = node.LastCheck
 	}
 
-	node.Info, err = getClientInfo(c.genesis, c.networkID, c.nodeURL, node.N)
-	if err != nil {
-		log.Warn("GetClientInfo failed", "error", err, "nodeID", node.N.ID())
-		if strings.Contains(err.Error(), "too many peers") {
-			node.TooManyPeers = true
-		}
-	} else {
-		log.Info("GetClientInfo succeeded")
-		node.Score += 10
-	}
+	c.reqCh <- n
 
 	// Store/update node in output set.
 	if node.Score <= 0 {
