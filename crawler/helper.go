@@ -12,8 +12,9 @@ import (
 	"gopkg.in/urfave/cli.v1"
 )
 
-func makeDiscoveryConfig(ctx *cli.Context) (*enode.LocalNode, discover.Config) {
+func makeDiscoveryConfig(ctx *cli.Context, db *enode.DB) (*enode.LocalNode, discover.Config) {
 	var cfg discover.Config
+	var err error
 
 	if ctx.IsSet(nodekeyFlag.Name) {
 		key, err := crypto.HexToECDSA(ctx.String(nodekeyFlag.Name))
@@ -25,19 +26,12 @@ func makeDiscoveryConfig(ctx *cli.Context) (*enode.LocalNode, discover.Config) {
 		cfg.PrivateKey, _ = crypto.GenerateKey()
 	}
 
-	bn, err := parseBootnodes(ctx)
+	cfg.Bootnodes, err = parseBootnodes(ctx)
 	if err != nil {
 		panic(err)
 	}
-	cfg.Bootnodes = bn
 
-	dbpath := ctx.String(nodedbFlag.Name)
-	db, err := enode.OpenDB(dbpath)
-	if err != nil {
-		panic(err)
-	}
-	ln := enode.NewLocalNode(db, cfg.PrivateKey)
-	return ln, cfg
+	return enode.NewLocalNode(db, cfg.PrivateKey), cfg
 }
 
 func listen(ln *enode.LocalNode, addr string) *net.UDPConn {

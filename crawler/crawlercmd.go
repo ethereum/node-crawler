@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
@@ -137,11 +138,17 @@ func crawlNodes(ctx *cli.Context) error {
 func crawlRound(ctx *cli.Context, inputSet nodeSet, db *sql.DB, timeout time.Duration) nodeSet {
 	output := make(nodeSet)
 
-	v5 := discv5(ctx, inputSet, timeout)
+	dbpath := ctx.String(nodedbFlag.Name)
+	nodeDB, err := enode.OpenDB(dbpath)
+	if err != nil {
+		panic(err)
+	}
+
+	v5 := discv5(ctx, nodeDB, inputSet, timeout)
 	output.add(v5.nodes()...)
 	log.Info("DiscV5", "nodes", len(v5.nodes()))
 
-	v4 := discv4(ctx, inputSet, timeout)
+	v4 := discv4(ctx, nodeDB, inputSet, timeout)
 	output.add(v4.nodes()...)
 	log.Info("DiscV4", "nodes", len(v4.nodes()))
 
@@ -193,8 +200,8 @@ func crawlRound(ctx *cli.Context, inputSet nodeSet, db *sql.DB, timeout time.Dur
 	return output
 }
 
-func discv5(ctx *cli.Context, inputSet nodeSet, timeout time.Duration) nodeSet {
-	ln, config := makeDiscoveryConfig(ctx)
+func discv5(ctx *cli.Context, db *enode.DB, inputSet nodeSet, timeout time.Duration) nodeSet {
+	ln, config := makeDiscoveryConfig(ctx, db)
 
 	socket := listen(ln, ctx.String(listenAddrFlag.Name))
 
@@ -210,8 +217,8 @@ func discv5(ctx *cli.Context, inputSet nodeSet, timeout time.Duration) nodeSet {
 	return c.run(timeout)
 }
 
-func discv4(ctx *cli.Context, inputSet nodeSet, timeout time.Duration) nodeSet {
-	ln, config := makeDiscoveryConfig(ctx)
+func discv4(ctx *cli.Context, db *enode.DB, inputSet nodeSet, timeout time.Duration) nodeSet {
+	ln, config := makeDiscoveryConfig(ctx, db)
 
 	socket := listen(ln, ctx.String(listenAddrFlag.Name))
 
