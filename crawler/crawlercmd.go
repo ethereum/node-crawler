@@ -38,10 +38,11 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/ethereum/go-ethereum/p2p/rlpx"
 	"github.com/ethereum/go-ethereum/params"
+
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -52,21 +53,20 @@ var (
 		ArgsUsage: "<nodefile>",
 		Action:    crawlNodes,
 		Flags: []cli.Flag{
-			bootnodesFlag,
 			utils.MainnetFlag,
 			utils.RopstenFlag,
 			utils.RinkebyFlag,
 			utils.GoerliFlag,
 			utils.NetworkIdFlag,
-			crawlTimeoutFlag,
+			bootnodesFlag,
 			nodeURLFlag,
+			nodeFileFlag,
+			timeoutFlag,
 			tableNameFlag,
+			listenAddrFlag,
+			nodekeyFlag,
+			nodedbFlag,
 		},
-	}
-	crawlTimeoutFlag = cli.DurationFlag{
-		Name:  "timeout",
-		Usage: "Time limit for the crawl.",
-		Value: 30 * time.Minute,
 	}
 	bootnodesFlag = cli.StringFlag{
 		Name:  "bootnodes",
@@ -75,7 +75,7 @@ var (
 	nodeURLFlag = cli.StringFlag{
 		Name:  "nodeURL",
 		Usage: "URL of the node you want to connect to",
-		Value: "http://localhost:8545",
+		// Value: "http://localhost:8545",
 	}
 	nodeFileFlag = cli.StringFlag{
 		Name:  "nodefile",
@@ -84,7 +84,7 @@ var (
 	timeoutFlag = cli.DurationFlag{
 		Name:  "timeout",
 		Usage: "Timeout for the crawling in a round",
-		Value: 1 * time.Minute,
+		Value: 5 * time.Minute,
 	}
 	tableNameFlag = cli.StringFlag{
 		Name:  "table",
@@ -106,12 +106,6 @@ var (
 	lastStatusUpdate time.Time
 )
 
-type crawledNode struct {
-	node         nodeJSON
-	info         *clientInfo
-	tooManyPeers bool
-}
-
 type clientInfo struct {
 	ClientType      string
 	SoftwareVersion uint64
@@ -123,13 +117,17 @@ type clientInfo struct {
 	HeadHash        common.Hash
 }
 
+type crawledNode struct {
+	node         nodeJSON
+	info         *clientInfo
+	tooManyPeers bool
+}
+
 func crawlNodes(ctx *cli.Context) error {
 	var inputSet nodeSet
 
-	if nodesFile := ctx.String(nodeFileFlag.Name); nodesFile != "" {
-		if common.FileExist(nodesFile) {
-			inputSet = loadNodesJSON(nodesFile)
-		}
+	if nodesFile := ctx.String(nodeFileFlag.Name); nodesFile != "" && common.FileExist(nodesFile) {
+		inputSet = loadNodesJSON(nodesFile)
 	}
 
 	var db *sql.DB
@@ -150,18 +148,29 @@ func crawlNodes(ctx *cli.Context) error {
 				panic(err)
 			}
 		}
-
 	}
+
 	timeout := ctx.Duration(timeoutFlag.Name)
 
 	for {
 		inputSet = crawlRound(ctx, inputSet, db, timeout)
+		if nodesFile := ctx.String(nodeFileFlag.Name); nodesFile != "" && common.FileExist(nodesFile) {
+			writeNodesJSON(nodesFile, inputSet)
+		}
 	}
 }
 
 func discv5(ctx *cli.Context, inputSet nodeSet, timeout time.Duration) nodeSet {
-	disc := startV5(ctx)
+	ln, config := makeDiscoveryConfig(ctx)
+
+	socket := listen(ln, ctx.String(listenAddrFlag.Name))
+
+	disc, err := discover.ListenV5(socket, ln, config)
+	if err != nil {
+		panic(err)
+	}
 	defer disc.Close()
+
 	// Crawl the DHT for some time
 	c := newCrawler(inputSet, disc, disc.RandomNodes())
 	c.revalidateInterval = 10 * time.Minute
@@ -169,8 +178,16 @@ func discv5(ctx *cli.Context, inputSet nodeSet, timeout time.Duration) nodeSet {
 }
 
 func discv4(ctx *cli.Context, inputSet nodeSet, timeout time.Duration) nodeSet {
-	disc := startV4(ctx)
+	ln, config := makeDiscoveryConfig(ctx)
+
+	socket := listen(ln, ctx.String(listenAddrFlag.Name))
+
+	disc, err := discover.ListenV4(socket, ln, config)
+	if err != nil {
+		panic(err)
+	}
 	defer disc.Close()
+
 	// Crawl the DHT for some time
 	c := newCrawler(inputSet, disc, disc.RandomNodes())
 	c.revalidateInterval = 10 * time.Minute
@@ -194,10 +211,12 @@ func makeGenesis(ctx *cli.Context) *core.Genesis {
 
 func crawlRound(ctx *cli.Context, inputSet nodeSet, db *sql.DB, timeout time.Duration) nodeSet {
 	output := make(nodeSet)
-	v5 := discv5(ctx, nodeSet{}, timeout)
+
+	v5 := discv5(ctx, inputSet, timeout)
 	output.add(v5.nodes()...)
 	log.Info("DiscV5", "nodes", len(v5.nodes()))
-	v4 := discv4(ctx, nodeSet{}, timeout)
+
+	v4 := discv4(ctx, inputSet, timeout)
 	output.add(v4.nodes()...)
 	log.Info("DiscV4", "nodes", len(v4.nodes()))
 
@@ -402,121 +421,4 @@ func negotiateEthProtocol(caps, peer []p2p.Cap) uint {
 		}
 	}
 	return highestEthVersion
-}
-
-func updateNodes(db *sql.DB, nodes []crawledNode) error {
-	log.Info("Writing nodes to db", "nodes", len(nodes))
-	now := time.Now()
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	stmt, err := tx.Prepare(
-		`insert into nodes(ID, 
-			Now,
-			ClientType,
-			PK,
-			SoftwareVersion,
-			Capabilities,
-			NetworkID,
-			ForkID,
-			Blockheight,
-			TotalDifficulty,
-			HeadHash,
-			IP,
-			FirstSeen,
-			LastSeen,
-			Seq,
-			Score,
-			ConnType) 
-			values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	for _, node := range nodes {
-		n := node.node
-		info := &clientInfo{}
-		if node.info != nil {
-			info = node.info
-		}
-		if info.ClientType == "" && node.tooManyPeers {
-			info.ClientType = "tmp"
-		}
-		connType := ""
-		var portUDP enr.UDP
-		if n.N.Load(&portUDP) == nil {
-			connType = "UDP"
-		}
-		var portTCP enr.TCP
-		if n.N.Load(&portTCP) == nil {
-			connType = "TCP"
-		}
-		var eth2 ETH2
-		if n.N.Load((&eth2)) == nil {
-			info.ClientType = "eth2"
-		}
-		var caps string
-		for _, c := range info.Capabilities {
-			caps = fmt.Sprintf("%v, %v", caps, c.String())
-		}
-		var pk string
-		if n.N.Pubkey() != nil {
-			pk = fmt.Sprintf("X: %v, Y: %v", n.N.Pubkey().X.String(), n.N.Pubkey().Y.String())
-		}
-		fid := fmt.Sprintf("Hash: %v, Next %v", info.ForkID.Hash, info.ForkID.Next)
-
-		_, err = stmt.Exec(
-			n.N.ID().String(),
-			now.String(),
-			info.ClientType,
-			pk,
-			info.SoftwareVersion,
-			caps,
-			info.NetworkID,
-			fid,
-			info.Blockheight,
-			info.TotalDifficulty.String(),
-			info.HeadHash.String(),
-			n.N.IP().String(),
-			n.FirstResponse.String(),
-			n.LastResponse.String(),
-			n.Seq,
-			n.Score,
-			connType,
-		)
-		if err != nil {
-			return err
-		}
-	}
-
-	return tx.Commit()
-}
-
-func createDB(db *sql.DB) error {
-	sqlStmt := `
-	CREATE TABLE nodes (
-		ID text not null, 
-		Now text not null,
-		ClientType text,
-		PK text,
-		SoftwareVersion text,
-		Capabilities text,
-		NetworkID number,
-		ForkID text,
-		Blockheight text,
-		TotalDifficulty text,
-		HeadHash text,
-		IP text,
-		FirstSeen text,
-		LastSeen text,
-		Seq number,
-		Score number,
-		ConnType text,
-		PRIMARY KEY (ID, Now)
-	);
-	delete from nodes;
-	`
-	_, err := db.Exec(sqlStmt)
-	return err
 }
