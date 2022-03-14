@@ -19,10 +19,8 @@ package main
 import (
 	"database/sql"
 	"os"
-	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/p2p/enode"
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
@@ -30,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/discover"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 
 	"gopkg.in/urfave/cli.v1"
 )
@@ -92,12 +91,6 @@ var (
 	}
 )
 
-type crawledNode struct {
-	node         nodeJSON
-	info         *clientInfo
-	tooManyPeers bool
-}
-
 func crawlNodes(ctx *cli.Context) error {
 	var inputSet nodeSet
 
@@ -151,45 +144,11 @@ func crawlRound(ctx *cli.Context, inputSet nodeSet, db *sql.DB, nodeDB *enode.DB
 	output.add(v4.nodes()...)
 	log.Info("DiscV4", "nodes", len(v4.nodes()))
 
-	genesis := makeGenesis(ctx)
-	if genesis == nil {
-		genesis = core.DefaultGenesisBlock()
-	}
-	networkID := ctx.Uint64(utils.NetworkIdFlag.Name)
-	nodeURL := ctx.String(nodeURLFlag.Name)
-
-	reqChan := make(chan nodeJSON, len(output))
-	respChan := make(chan crawledNode, 10)
-	getNodeLoop := func(in <-chan nodeJSON, out chan<- crawledNode) {
-		for {
-			node := <-in
-			info, err := getClientInfo(genesis, networkID, nodeURL, node.N)
-			tooManyPeers := false
-			if err != nil {
-				log.Warn("GetClientInfo failed", "error", err, "nodeID", node.N.ID())
-				if strings.Contains(err.Error(), "too many peers") {
-					tooManyPeers = true
-				}
-			} else {
-				log.Info("GetClientInfo succeeded")
-			}
-			out <- crawledNode{node: node, info: info, tooManyPeers: tooManyPeers}
-		}
-	}
-	// Schedule 10 workers
-	for i := 0; i < 10; i++ {
-		go getNodeLoop(reqChan, respChan)
-	}
-
-	// Try to connect and get the status of all nodes
+	var nodes []nodeJSON
 	for _, node := range output {
-		reqChan <- node
-	}
-	var nodes []crawledNode
-	for i := 0; i < len(output); i++ {
-		node := <-respChan
 		nodes = append(nodes, node)
 	}
+
 	// Write the node info to influx
 	if db != nil {
 		if err := updateNodes(db, nodes); err != nil {
@@ -210,10 +169,7 @@ func discv5(ctx *cli.Context, db *enode.DB, inputSet nodeSet, timeout time.Durat
 	}
 	defer disc.Close()
 
-	// Crawl the DHT for some time
-	c := newCrawler(inputSet, disc, disc.RandomNodes())
-	c.revalidateInterval = 10 * time.Minute
-	return c.run(timeout)
+	return runCrawler(ctx, disc, inputSet, timeout)
 }
 
 func discv4(ctx *cli.Context, db *enode.DB, inputSet nodeSet, timeout time.Duration) nodeSet {
@@ -227,8 +183,19 @@ func discv4(ctx *cli.Context, db *enode.DB, inputSet nodeSet, timeout time.Durat
 	}
 	defer disc.Close()
 
+	return runCrawler(ctx, disc, inputSet, timeout)
+}
+
+func runCrawler(ctx *cli.Context, disc resolver, inputSet nodeSet, timeout time.Duration) nodeSet {
+	genesis := makeGenesis(ctx)
+	if genesis == nil {
+		genesis = core.DefaultGenesisBlock()
+	}
+	networkID := ctx.Uint64(utils.NetworkIdFlag.Name)
+	nodeURL := ctx.String(nodeURLFlag.Name)
+
 	// Crawl the DHT for some time
-	c := newCrawler(inputSet, disc, disc.RandomNodes())
+	c := newCrawler(genesis, networkID, nodeURL, inputSet, disc, disc.RandomNodes())
 	c.revalidateInterval = 10 * time.Minute
 	return c.run(timeout)
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 )
 
-func updateNodes(db *sql.DB, nodes []crawledNode) error {
+func updateNodes(db *sql.DB, nodes []nodeJSON) error {
 	log.Info("Writing nodes to db", "nodes", len(nodes))
 	now := time.Now()
 	tx, err := db.Begin()
@@ -41,13 +41,14 @@ func updateNodes(db *sql.DB, nodes []crawledNode) error {
 		return err
 	}
 	defer stmt.Close()
-	for _, node := range nodes {
-		n := node.node
+	for _, n := range nodes {
+
 		info := &clientInfo{}
-		if node.info != nil {
-			info = node.info
+		if n.Info != nil {
+			info = n.Info
 		}
-		if info.ClientType == "" && node.tooManyPeers {
+
+		if info.ClientType == "" && n.TooManyPeers {
 			info.ClientType = "tmp"
 		}
 		connType := ""

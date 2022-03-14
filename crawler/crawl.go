@@ -17,20 +17,29 @@
 package main
 
 import (
+	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
 
 type crawler struct {
-	input     nodeSet
-	output    nodeSet
-	disc      resolver
-	iters     []enode.Iterator
+	input  nodeSet
+	output nodeSet
+
+	genesis   *core.Genesis
+	networkID uint64
+	nodeURL   string
+
+	disc resolver
+
 	inputIter enode.Iterator
-	ch        chan *enode.Node
-	closed    chan struct{}
+	iters     []enode.Iterator
+
+	ch     chan *enode.Node
+	closed chan struct{}
 
 	// settings
 	revalidateInterval time.Duration
@@ -38,12 +47,16 @@ type crawler struct {
 
 type resolver interface {
 	RequestENR(*enode.Node) (*enode.Node, error)
+	RandomNodes() enode.Iterator
 }
 
-func newCrawler(input nodeSet, disc resolver, iters ...enode.Iterator) *crawler {
+func newCrawler(genesis *core.Genesis, networkID uint64, nodeURL string, input nodeSet, disc resolver, iters ...enode.Iterator) *crawler {
 	c := &crawler{
 		input:     input,
 		output:    make(nodeSet, len(input)),
+		genesis:   genesis,
+		networkID: networkID,
+		nodeURL:   nodeURL,
 		disc:      disc,
 		iters:     iters,
 		inputIter: enode.IterNodes(input.nodes()),
@@ -67,6 +80,7 @@ func (c *crawler) run(timeout time.Duration) nodeSet {
 		liveIters    = len(c.iters)
 	)
 	defer timeoutTimer.Stop()
+
 	for _, it := range c.iters {
 		go c.runIterator(doneCh, it)
 	}
@@ -99,6 +113,7 @@ loop:
 	for ; liveIters > 0; liveIters-- {
 		<-doneCh
 	}
+
 	return c.output
 }
 
@@ -121,9 +136,10 @@ func (c *crawler) updateNode(n *enode.Node) {
 		return
 	}
 
+	node.LastCheck = time.Now().UTC().Truncate(time.Second)
+
 	// Request the node record.
 	nn, err := c.disc.RequestENR(n)
-	node.LastCheck = truncNow()
 	if err != nil {
 		if node.Score == 0 {
 			// Node doesn't implement EIP-868.
@@ -141,6 +157,17 @@ func (c *crawler) updateNode(n *enode.Node) {
 		node.LastResponse = node.LastCheck
 	}
 
+	node.Info, err = getClientInfo(c.genesis, c.networkID, c.nodeURL, node.N)
+	if err != nil {
+		log.Warn("GetClientInfo failed", "error", err, "nodeID", node.N.ID())
+		if strings.Contains(err.Error(), "too many peers") {
+			node.TooManyPeers = true
+		}
+	} else {
+		log.Info("GetClientInfo succeeded")
+		node.Score += 10
+	}
+
 	// Store/update node in output set.
 	if node.Score <= 0 {
 		log.Info("Removing node", "id", n.ID())
@@ -149,8 +176,4 @@ func (c *crawler) updateNode(n *enode.Node) {
 		log.Info("Updating node", "id", n.ID(), "seq", n.Seq(), "score", node.Score)
 		c.output[n.ID()] = node
 	}
-}
-
-func truncNow() time.Time {
-	return time.Now().UTC().Truncate(1 * time.Second)
 }
