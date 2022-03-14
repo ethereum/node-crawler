@@ -17,12 +17,7 @@
 package main
 
 import (
-	"context"
-	"crypto/ecdsa"
 	"database/sql"
-	"fmt"
-	"math/big"
-	"net"
 	"os"
 	"strings"
 	"time"
@@ -32,16 +27,8 @@ import (
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/forkid"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/p2p/discover"
-	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/rlpx"
-	"github.com/ethereum/go-ethereum/params"
 
 	"gopkg.in/urfave/cli.v1"
 )
@@ -102,20 +89,7 @@ var (
 		Name:  "nodedb",
 		Usage: "Nodes database location",
 	}
-	status           *Status
-	lastStatusUpdate time.Time
 )
-
-type clientInfo struct {
-	ClientType      string
-	SoftwareVersion uint64
-	Capabilities    []p2p.Cap
-	NetworkID       uint64
-	ForkID          forkid.ID
-	Blockheight     string
-	TotalDifficulty *big.Int
-	HeadHash        common.Hash
-}
 
 type crawledNode struct {
 	node         nodeJSON
@@ -157,55 +131,6 @@ func crawlNodes(ctx *cli.Context) error {
 		if nodesFile := ctx.String(nodeFileFlag.Name); nodesFile != "" && common.FileExist(nodesFile) {
 			writeNodesJSON(nodesFile, inputSet)
 		}
-	}
-}
-
-func discv5(ctx *cli.Context, inputSet nodeSet, timeout time.Duration) nodeSet {
-	ln, config := makeDiscoveryConfig(ctx)
-
-	socket := listen(ln, ctx.String(listenAddrFlag.Name))
-
-	disc, err := discover.ListenV5(socket, ln, config)
-	if err != nil {
-		panic(err)
-	}
-	defer disc.Close()
-
-	// Crawl the DHT for some time
-	c := newCrawler(inputSet, disc, disc.RandomNodes())
-	c.revalidateInterval = 10 * time.Minute
-	return c.run(timeout)
-}
-
-func discv4(ctx *cli.Context, inputSet nodeSet, timeout time.Duration) nodeSet {
-	ln, config := makeDiscoveryConfig(ctx)
-
-	socket := listen(ln, ctx.String(listenAddrFlag.Name))
-
-	disc, err := discover.ListenV4(socket, ln, config)
-	if err != nil {
-		panic(err)
-	}
-	defer disc.Close()
-
-	// Crawl the DHT for some time
-	c := newCrawler(inputSet, disc, disc.RandomNodes())
-	c.revalidateInterval = 10 * time.Minute
-	return c.run(timeout)
-}
-
-// makeGenesis is the pendant to utils.MakeGenesis
-// with local flags instead of global flags.
-func makeGenesis(ctx *cli.Context) *core.Genesis {
-	switch {
-	case ctx.Bool(utils.RopstenFlag.Name):
-		return core.DefaultRopstenGenesisBlock()
-	case ctx.Bool(utils.RinkebyFlag.Name):
-		return core.DefaultRinkebyGenesisBlock()
-	case ctx.Bool(utils.GoerliFlag.Name):
-		return core.DefaultGoerliGenesisBlock()
-	default:
-		return core.DefaultGenesisBlock()
 	}
 }
 
@@ -268,157 +193,51 @@ func crawlRound(ctx *cli.Context, inputSet nodeSet, db *sql.DB, timeout time.Dur
 	return output
 }
 
-func getClientInfo(genesis *core.Genesis, networkID uint64, nodeURL string, n *enode.Node) (*clientInfo, error) {
-	var info clientInfo
-	conn, sk, err := dial(n)
+func discv5(ctx *cli.Context, inputSet nodeSet, timeout time.Duration) nodeSet {
+	ln, config := makeDiscoveryConfig(ctx)
+
+	socket := listen(ln, ctx.String(listenAddrFlag.Name))
+
+	disc, err := discover.ListenV5(socket, ln, config)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-	defer conn.Close()
-	conn.SetDeadline(time.Now().Add(5 * time.Second))
+	defer disc.Close()
 
-	// write hello to client
-	pub0 := crypto.FromECDSAPub(&sk.PublicKey)[1:]
-	ourHandshake := &Hello{
-		Version: 5,
-		Caps: []p2p.Cap{
-			{Name: "eth", Version: 64},
-			{Name: "eth", Version: 65},
-			{Name: "eth", Version: 66},
-		},
-		ID: pub0,
-	}
-	if err := conn.Write(ourHandshake); err != nil {
-		return nil, err
-	}
+	// Crawl the DHT for some time
+	c := newCrawler(inputSet, disc, disc.RandomNodes())
+	c.revalidateInterval = 10 * time.Minute
+	return c.run(timeout)
+}
 
-	// read hello from client
-	switch msg := conn.Read().(type) {
-	case *Hello:
-		// set snappy if version is at least 5
-		if msg.Version >= 5 {
-			conn.SetSnappy(true)
-		}
-		info.Capabilities = msg.Caps
-		info.SoftwareVersion = msg.Version
-		info.ClientType = msg.Name
-	case *Disconnect:
-		return nil, fmt.Errorf("bad hello handshake: %v", msg.Reason.Error())
-	case *Error:
-		return nil, fmt.Errorf("bad hello handshake: %v", msg.Error())
+func discv4(ctx *cli.Context, inputSet nodeSet, timeout time.Duration) nodeSet {
+	ln, config := makeDiscoveryConfig(ctx)
+
+	socket := listen(ln, ctx.String(listenAddrFlag.Name))
+
+	disc, err := discover.ListenV4(socket, ln, config)
+	if err != nil {
+		panic(err)
+	}
+	defer disc.Close()
+
+	// Crawl the DHT for some time
+	c := newCrawler(inputSet, disc, disc.RandomNodes())
+	c.revalidateInterval = 10 * time.Minute
+	return c.run(timeout)
+}
+
+// makeGenesis is the pendant to utils.MakeGenesis
+// with local flags instead of global flags.
+func makeGenesis(ctx *cli.Context) *core.Genesis {
+	switch {
+	case ctx.Bool(utils.RopstenFlag.Name):
+		return core.DefaultRopstenGenesisBlock()
+	case ctx.Bool(utils.RinkebyFlag.Name):
+		return core.DefaultRinkebyGenesisBlock()
+	case ctx.Bool(utils.GoerliFlag.Name):
+		return core.DefaultGoerliGenesisBlock()
 	default:
-		return nil, fmt.Errorf("bad hello handshake: %v", msg.Code())
+		return core.DefaultGenesisBlock()
 	}
-	highestEthVersion := uint32(negotiateEthProtocol(ourHandshake.Caps, info.Capabilities))
-	// If node provides no eth version, we can skip it.
-	if highestEthVersion == 0 {
-		return &info, nil
-	}
-	conn.SetDeadline(time.Now().Add(15 * time.Second))
-	// write status message, if we have a backing node
-	if len(nodeURL) > 0 {
-		// write status message
-		if status, err := getStatus(genesis.Config, genesis.ToBlock(nil).Hash(), networkID, nodeURL); err != nil {
-			log.Error("Local node failed to respond", "err", err)
-		} else {
-			status.ProtocolVersion = highestEthVersion
-			if err := conn.Write(status); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	// Regardless of whether we wrote a status message or not, the remote side
-	// might still send us one.
-
-	// read status message from client
-	switch msg := conn.Read().(type) {
-	case *Status:
-		info.ForkID = msg.ForkID
-		info.HeadHash = msg.Head
-		info.NetworkID = msg.NetworkID
-		// m.ProtocolVersion
-		info.TotalDifficulty = msg.TD
-		// Set correct TD if received TD is higher
-		if msg.TD.Cmp(status.TD) > 0 {
-			status.TD = msg.TD
-		}
-	case *Disconnect:
-		return nil, fmt.Errorf("bad status handshake: %v", msg.Reason.Error())
-	case *Error:
-		return nil, fmt.Errorf("bad status handshake: %v", msg.Error())
-	default:
-		return nil, fmt.Errorf("bad status handshake: %v", msg.Code())
-	}
-
-	// Disconnect from client
-	conn.Write(Disconnect{Reason: p2p.DiscQuitting})
-
-	return &info, nil
-}
-
-// dial attempts to dial the given node and perform a handshake,
-func dial(n *enode.Node) (*Conn, *ecdsa.PrivateKey, error) {
-	var conn Conn
-	// dial
-	fd, err := net.Dial("tcp", fmt.Sprintf("%v:%d", n.IP(), n.TCP()))
-	if err != nil {
-		return nil, nil, err
-	}
-	conn.Conn = rlpx.NewConn(fd, n.Pubkey())
-	// do encHandshake
-	ourKey, _ := crypto.GenerateKey()
-	_, err = conn.Handshake(ourKey)
-	if err != nil {
-		return nil, nil, err
-	}
-	return &conn, ourKey, nil
-}
-
-func getStatus(config *params.ChainConfig, genesis common.Hash, network uint64, nodeURL string) (*Status, error) {
-	if status == nil {
-		status = &Status{
-			ProtocolVersion: 66,
-			NetworkID:       network,
-			TD:              big.NewInt(0),
-			Head:            common.Hash{},
-			Genesis:         genesis,
-			ForkID:          forkid.NewID(config, genesis, 0),
-		}
-		lastStatusUpdate = time.Time{}
-	}
-
-	if time.Since(lastStatusUpdate) > 15*time.Second {
-		header, err := getBCState(nodeURL)
-		if err != nil {
-			return nil, err
-		}
-		status.Head = header.Hash()
-		status.ForkID = forkid.NewID(config, genesis, header.Number.Uint64())
-	}
-	return status, nil
-}
-
-func getBCState(nodeURL string) (*types.Header, error) {
-	cl, err := ethclient.Dial(nodeURL)
-	if err != nil {
-		return nil, err
-	}
-
-	return cl.HeaderByNumber(context.Background(), nil)
-}
-
-// negotiateEthProtocol sets the Conn's eth protocol version
-// to highest advertised capability from peer
-func negotiateEthProtocol(caps, peer []p2p.Cap) uint {
-	var highestEthVersion uint
-	for _, capability := range peer {
-		if capability.Name != "eth" {
-			continue
-		}
-		if capability.Version > highestEthVersion && capability.Version <= caps[len(caps)-1].Version {
-			highestEthVersion = capability.Version
-		}
-	}
-	return highestEthVersion
 }
