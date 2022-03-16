@@ -94,7 +94,9 @@ var (
 func crawlNodes(ctx *cli.Context) error {
 	var inputSet nodeSet
 
-	if nodesFile := ctx.String(nodeFileFlag.Name); nodesFile != "" && common.FileExist(nodesFile) {
+	nodesFile := ctx.String(nodeFileFlag.Name)
+
+	if nodesFile != "" && common.FileExist(nodesFile) {
 		inputSet = loadNodesJSON(nodesFile)
 	}
 
@@ -127,22 +129,26 @@ func crawlNodes(ctx *cli.Context) error {
 
 	for {
 		inputSet = crawlRound(ctx, inputSet, db, nodeDB, timeout)
-		if nodesFile := ctx.String(nodeFileFlag.Name); nodesFile != "" && common.FileExist(nodesFile) {
+		if nodesFile != "" {
 			writeNodesJSON(nodesFile, inputSet)
 		}
 	}
 }
 
 func crawlRound(ctx *cli.Context, inputSet nodeSet, db *sql.DB, nodeDB *enode.DB, timeout time.Duration) nodeSet {
-	output := make(nodeSet)
-
 	v5 := discv5(ctx, nodeDB, inputSet, timeout)
-	output.add(v5.nodes()...)
 	log.Info("DiscV5", "nodes", len(v5.nodes()))
 
 	v4 := discv4(ctx, nodeDB, inputSet, timeout)
-	output.add(v4.nodes()...)
 	log.Info("DiscV4", "nodes", len(v4.nodes()))
+
+	output := make(nodeSet, len(v5)+len(v4))
+	for _, n := range v5 {
+		output[n.N.ID()] = n
+	}
+	for _, n := range v4 {
+		output[n.N.ID()] = n
+	}
 
 	var nodes []nodeJSON
 	for _, node := range output {

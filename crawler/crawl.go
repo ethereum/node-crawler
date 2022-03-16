@@ -121,6 +121,7 @@ loop:
 	}
 
 	close(c.closed)
+	close(c.reqCh)
 	for _, it := range c.iters {
 		it.Close()
 	}
@@ -144,10 +145,14 @@ func (c *crawler) runIterator(done chan<- enode.Iterator, it enode.Iterator) {
 }
 
 func (c *crawler) getClientInfoLoop() {
-	defer func() {}()
+	defer func() { c.Done() }()
 	for {
 		select {
-		case n := <-c.reqCh:
+		case n, ok := <-c.reqCh:
+			if !ok {
+				return
+			}
+
 			var tooManyPeers bool
 			var scoreInc int
 
@@ -182,9 +187,6 @@ func (c *crawler) getClientInfoLoop() {
 			}
 			c.output[n.ID()] = node
 			c.Unlock()
-
-		case <-c.closed:
-			return
 		}
 	}
 }
