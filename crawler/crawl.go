@@ -69,7 +69,7 @@ func newCrawler(genesis *core.Genesis, networkID uint64, nodeURL string, input n
 		inputIter: enode.IterNodes(input.nodes()),
 		ch:        make(chan *enode.Node),
 		reqCh:     make(chan *enode.Node, 512), // TODO: define this in config
-		workers:   64,                          // TODO: define this in config
+		workers:   16,                          // TODO: define this in config
 		closed:    make(chan struct{}),
 	}
 	c.iters = append(c.iters, c.inputIter)
@@ -166,25 +166,28 @@ func (c *crawler) getClientInfoLoop() {
 				scoreInc = 10
 			}
 
-			c.Lock()
-			node := c.output[n.ID()]
-			node.Info = info
-			node.TooManyPeers = tooManyPeers
-			node.Score += scoreInc
 			if info != nil {
 				log.Info(
 					"Updating node info",
-					"score", node.Score,
-					"client_type", node.Info.ClientType,
-					"version", node.Info.SoftwareVersion,
-					"network_id", node.Info.NetworkID,
-					"caps", node.Info.Capabilities,
-					"fork_id", node.Info.ForkID,
-					"height", node.Info.Blockheight,
-					"td", node.Info.TotalDifficulty,
-					"head", node.Info.HeadHash,
+					"client_type", info.ClientType,
+					"version", info.SoftwareVersion,
+					"network_id", info.NetworkID,
+					"caps", info.Capabilities,
+					"fork_id", info.ForkID,
+					"height", info.Blockheight,
+					"td", info.TotalDifficulty,
+					"head", info.HeadHash,
+					"url", n.URLv4(),
 				)
 			}
+
+			c.Lock()
+			node := c.output[n.ID()]
+			node.N = n
+			node.Seq = n.Seq()
+			node.Info = info
+			node.TooManyPeers = tooManyPeers
+			node.Score += scoreInc
 			c.output[n.ID()] = node
 			c.Unlock()
 		}
@@ -223,14 +226,13 @@ func (c *crawler) updateNode(n *enode.Node) {
 		node.LastResponse = node.LastCheck
 	}
 
-	c.reqCh <- n
-
 	// Store/update node in output set.
 	if node.Score <= 0 {
 		log.Info("Removing node", "id", n.ID())
 		delete(c.output, n.ID())
 	} else {
 		log.Info("Updating node", "id", n.ID(), "seq", n.Seq(), "score", node.Score)
+		c.reqCh <- n
 		c.output[n.ID()] = node
 	}
 }
