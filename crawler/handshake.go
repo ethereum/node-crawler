@@ -97,6 +97,10 @@ func dial(n *enode.Node) (*Conn, *ecdsa.PrivateKey, error) {
 
 	conn.Conn = rlpx.NewConn(fd, n.Pubkey())
 
+	if err = conn.SetDeadline(time.Now().Add(15 * time.Second)); err != nil {
+		return nil, nil, errors.Wrap(err, "cannot set conn deadline")
+	}
+
 	// do encHandshake
 	ourKey, _ := crypto.GenerateKey()
 
@@ -114,9 +118,14 @@ func writeHello(conn *Conn, priv *ecdsa.PrivateKey) error {
 	h := &Hello{
 		Version: 5,
 		Caps: []p2p.Cap{
+			{Name: "diff", Version: 1},
 			{Name: "eth", Version: 64},
 			{Name: "eth", Version: 65},
 			{Name: "eth", Version: 66},
+			{Name: "les", Version: 2},
+			{Name: "les", Version: 3},
+			{Name: "les", Version: 4},
+			{Name: "snap", Version: 1},
 		},
 		ID: pub0,
 	}
