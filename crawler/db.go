@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"time"
@@ -9,10 +10,16 @@ import (
 
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+
+	beacon "github.com/protolambda/zrnt/eth2/beacon/common"
+	"github.com/protolambda/ztyp/codec"
+
+	"github.com/oschwald/geoip2-golang"
 )
 
-func updateNodes(db *sql.DB, nodes []nodeJSON) error {
+func updateNodes(db *sql.DB, geoipDB *geoip2.Reader, nodes []nodeJSON) error {
 	log.Info("Writing nodes to db", "nodes", len(nodes))
+
 	now := time.Now()
 	tx, err := db.Begin()
 	if err != nil {
@@ -31,18 +38,21 @@ func updateNodes(db *sql.DB, nodes []nodeJSON) error {
 			TotalDifficulty,
 			HeadHash,
 			IP,
+			Country,
+			City,
+			Coordinates,
 			FirstSeen,
 			LastSeen,
 			Seq,
 			Score,
 			ConnType) 
-			values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+			values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	for _, n := range nodes {
 
+	for _, n := range nodes {
 		info := &clientInfo{}
 		if n.Info != nil {
 			info = n.Info
@@ -60,9 +70,15 @@ func updateNodes(db *sql.DB, nodes []nodeJSON) error {
 		if n.N.Load(&portTCP) == nil {
 			connType = "TCP"
 		}
+		fid := fmt.Sprintf("Hash: %v, Next %v", info.ForkID.Hash, info.ForkID.Next)
+
 		var eth2 ETH2
-		if n.N.Load((&eth2)) == nil {
+		if n.N.Load(&eth2) == nil {
 			info.ClientType = "eth2"
+			var dat beacon.Eth2Data
+			if err := dat.Deserialize(codec.NewDecodingReader(bytes.NewReader(eth2), uint64(len(eth2)))); err == nil {
+				fid = fmt.Sprintf("Hash: %v, Next %v", dat.ForkDigest, dat.NextForkEpoch)
+			}
 		}
 		var caps string
 		for _, c := range info.Capabilities {
@@ -72,7 +88,19 @@ func updateNodes(db *sql.DB, nodes []nodeJSON) error {
 		if n.N.Pubkey() != nil {
 			pk = fmt.Sprintf("X: %v, Y: %v", n.N.Pubkey().X.String(), n.N.Pubkey().Y.String())
 		}
-		fid := fmt.Sprintf("Hash: %v, Next %v", info.ForkID.Hash, info.ForkID.Next)
+
+		var country, city, loc string
+		if geoipDB != nil {
+			// parse GeoIp info
+			ipRecord, err := geoipDB.City(n.N.IP())
+			if err != nil {
+				return err
+			}
+			country, city, loc =
+				ipRecord.Country.Names["en"],
+				ipRecord.City.Names["en"],
+				fmt.Sprintf("%v,%v", ipRecord.Location.Latitude, ipRecord.Location.Longitude)
+		}
 
 		_, err = stmt.Exec(
 			n.N.ID().String(),
@@ -87,6 +115,9 @@ func updateNodes(db *sql.DB, nodes []nodeJSON) error {
 			info.TotalDifficulty.String(),
 			info.HeadHash.String(),
 			n.N.IP().String(),
+			country,
+			city,
+			loc,
 			n.FirstResponse.String(),
 			n.LastResponse.String(),
 			n.Seq,
@@ -116,6 +147,9 @@ func createDB(db *sql.DB) error {
 		TotalDifficulty text,
 		HeadHash text,
 		IP text,
+		Country text,
+		City text,
+		Coordinates text,
 		FirstSeen text,
 		LastSeen text,
 		Seq number,

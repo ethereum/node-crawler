@@ -23,6 +23,8 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
+	"github.com/oschwald/geoip2-golang"
+
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
@@ -89,10 +91,15 @@ var (
 		Name:  "nodedb",
 		Usage: "Nodes database location",
 	}
+	geoipdbFlag = cli.StringFlag{
+		Name:  "geoipdb",
+		Usage: "geoip2 database location",
+	}
 )
 
 func crawlNodes(ctx *cli.Context) error {
 	var inputSet nodeSet
+	var geoipDB *geoip2.Reader
 
 	nodesFile := ctx.String(nodeFileFlag.Name)
 
@@ -127,15 +134,23 @@ func crawlNodes(ctx *cli.Context) error {
 		panic(err)
 	}
 
+	if geoipFile := ctx.String(geoipdbFlag.Name); geoipFile != "" {
+		geoipDB, err = geoip2.Open(geoipFile)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = geoipDB.Close() }()
+	}
+
 	for {
-		inputSet = crawlRound(ctx, inputSet, db, nodeDB, timeout)
+		inputSet = crawlRound(ctx, inputSet, db, geoipDB, nodeDB, timeout)
 		if nodesFile != "" {
 			writeNodesJSON(nodesFile, inputSet)
 		}
 	}
 }
 
-func crawlRound(ctx *cli.Context, inputSet nodeSet, db *sql.DB, nodeDB *enode.DB, timeout time.Duration) nodeSet {
+func crawlRound(ctx *cli.Context, inputSet nodeSet, db *sql.DB, geoipDB *geoip2.Reader, nodeDB *enode.DB, timeout time.Duration) nodeSet {
 	v5 := discv5(ctx, nodeDB, inputSet, timeout)
 	log.Info("DiscV5", "nodes", len(v5.nodes()))
 
@@ -157,7 +172,7 @@ func crawlRound(ctx *cli.Context, inputSet nodeSet, db *sql.DB, nodeDB *enode.DB
 
 	// Write the node info to influx
 	if db != nil {
-		if err := updateNodes(db, nodes); err != nil {
+		if err := updateNodes(db, geoipDB, nodes); err != nil {
 			panic(err)
 		}
 	}
