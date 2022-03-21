@@ -201,7 +201,7 @@ func (c *crawler) updateNode(n *enode.Node) {
 	node, ok := c.output[n.ID()]
 
 	// Skip validation of recently-seen nodes.
-	if ok && time.Since(node.LastCheck) < c.revalidateInterval {
+	if ok && !node.TooManyPeers && time.Since(node.LastCheck) < c.revalidateInterval {
 		return
 	}
 
