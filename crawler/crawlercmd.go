@@ -19,6 +19,7 @@ package main
 import (
 	"database/sql"
 	"os"
+	"sync"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -151,11 +152,24 @@ func crawlNodes(ctx *cli.Context) error {
 }
 
 func crawlRound(ctx *cli.Context, inputSet nodeSet, db *sql.DB, geoipDB *geoip2.Reader, nodeDB *enode.DB, timeout time.Duration) nodeSet {
-	v5 := discv5(ctx, nodeDB, inputSet, timeout)
-	log.Info("DiscV5", "nodes", len(v5.nodes()))
+	var v4, v5 nodeSet
+	var wg sync.WaitGroup
 
-	v4 := discv4(ctx, nodeDB, inputSet, timeout)
-	log.Info("DiscV4", "nodes", len(v4.nodes()))
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		v5 = discv5(ctx, nodeDB, inputSet, timeout)
+		log.Info("DiscV5", "nodes", len(v5.nodes()))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		v4 = discv4(ctx, nodeDB, inputSet, timeout)
+		log.Info("DiscV4", "nodes", len(v4.nodes()))
+	}()
+
+	wg.Wait()
 
 	output := make(nodeSet, len(v5)+len(v4))
 	for _, n := range v5 {
