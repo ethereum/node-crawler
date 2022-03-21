@@ -56,6 +56,7 @@ var (
 			listenAddrFlag,
 			nodekeyFlag,
 			nodedbFlag,
+			geoipdbFlag,
 		},
 	}
 	bootnodesFlag = cli.StringFlag{
