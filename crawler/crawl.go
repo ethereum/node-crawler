@@ -128,6 +128,8 @@ loop:
 	}
 	c.Wait()
 
+	close(c.ch)
+
 	return c.output
 }
 
