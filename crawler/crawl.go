@@ -183,7 +183,9 @@ func (c *crawler) getClientInfoLoop() {
 			node := c.output[n.ID()]
 			node.N = n
 			node.Seq = n.Seq()
-			node.Info = info
+			if info != nil {
+				node.Info = info
+			}
 			node.TooManyPeers = tooManyPeers
 			node.Score += scoreInc
 			c.output[n.ID()] = node
