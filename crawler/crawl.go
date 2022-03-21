@@ -27,7 +27,6 @@ import (
 )
 
 type crawler struct {
-	input  nodeSet
 	output nodeSet
 
 	genesis   *core.Genesis
@@ -59,7 +58,6 @@ type resolver interface {
 
 func newCrawler(genesis *core.Genesis, networkID uint64, nodeURL string, input nodeSet, disc resolver, iters ...enode.Iterator) *crawler {
 	c := &crawler{
-		input:     input,
 		output:    make(nodeSet, len(input)),
 		genesis:   genesis,
 		networkID: networkID,
@@ -107,7 +105,7 @@ loop:
 		case it := <-doneCh:
 			if it == c.inputIter {
 				// Enable timeout when we're done revalidating the input nodes.
-				log.Info("Revalidation of input set is done", "len", len(c.input))
+				log.Info("Revalidation of input set is done", "len", len(c.output))
 				if timeout > 0 {
 					timeoutCh = timeoutTimer.C
 				}
