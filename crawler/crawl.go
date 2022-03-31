@@ -85,6 +85,7 @@ func (c *crawler) run(timeout time.Duration) nodeSet {
 		timeoutCh    <-chan time.Time
 		doneCh       = make(chan enode.Iterator, len(c.iters))
 		liveIters    = len(c.iters)
+		inputSetLen  = len(c.output)
 	)
 	defer timeoutTimer.Stop()
 
@@ -105,7 +106,7 @@ loop:
 		case it := <-doneCh:
 			if it == c.inputIter {
 				// Enable timeout when we're done revalidating the input nodes.
-				log.Info("Revalidation of input set is done", "len", len(c.output))
+				log.Info("Revalidation of input set is done", "len", inputSetLen)
 				if timeout > 0 {
 					timeoutCh = timeoutTimer.C
 				}
