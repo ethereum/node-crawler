@@ -47,6 +47,10 @@ type nodeJSON struct {
 	LastResponse  time.Time `json:"lastResponse,omitempty"`
 	// This one tracks the time of our last attempt to contact the node.
 	LastCheck time.Time `json:"lastCheck,omitempty"`
+
+	Info *clientInfo `json:"clientInfo,omitempty"`
+
+	TooManyPeers bool `json:"tooManyPeers,omitempty"`
 }
 
 func loadNodesJSON(file string) nodeSet {

@@ -17,31 +17,22 @@
 package main
 
 import (
-	"context"
-	"crypto/ecdsa"
 	"database/sql"
-	"fmt"
-	"math/big"
-	"net"
 	"os"
-	"strings"
+	"sync"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 
+	"github.com/oschwald/geoip2-golang"
+
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/forkid"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
-	"github.com/ethereum/go-ethereum/p2p/enr"
-	"github.com/ethereum/go-ethereum/p2p/rlpx"
-	"github.com/ethereum/go-ethereum/params"
+
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -52,21 +43,21 @@ var (
 		ArgsUsage: "<nodefile>",
 		Action:    crawlNodes,
 		Flags: []cli.Flag{
-			bootnodesFlag,
 			utils.MainnetFlag,
 			utils.RopstenFlag,
 			utils.RinkebyFlag,
 			utils.GoerliFlag,
 			utils.NetworkIdFlag,
-			crawlTimeoutFlag,
+			bootnodesFlag,
 			nodeURLFlag,
+			nodeFileFlag,
+			timeoutFlag,
 			tableNameFlag,
+			listenAddrFlag,
+			nodekeyFlag,
+			nodedbFlag,
+			geoipdbFlag,
 		},
-	}
-	crawlTimeoutFlag = cli.DurationFlag{
-		Name:  "timeout",
-		Usage: "Time limit for the crawl.",
-		Value: 30 * time.Minute,
 	}
 	bootnodesFlag = cli.StringFlag{
 		Name:  "bootnodes",
@@ -75,7 +66,7 @@ var (
 	nodeURLFlag = cli.StringFlag{
 		Name:  "nodeURL",
 		Usage: "URL of the node you want to connect to",
-		Value: "http://localhost:8545",
+		// Value: "http://localhost:8545",
 	}
 	nodeFileFlag = cli.StringFlag{
 		Name:  "nodefile",
@@ -84,7 +75,7 @@ var (
 	timeoutFlag = cli.DurationFlag{
 		Name:  "timeout",
 		Usage: "Timeout for the crawling in a round",
-		Value: 1 * time.Minute,
+		Value: 5 * time.Minute,
 	}
 	tableNameFlag = cli.StringFlag{
 		Name:  "table",
@@ -102,34 +93,20 @@ var (
 		Name:  "nodedb",
 		Usage: "Nodes database location",
 	}
-	status           *Status
-	lastStatusUpdate time.Time
+	geoipdbFlag = cli.StringFlag{
+		Name:  "geoipdb",
+		Usage: "geoip2 database location",
+	}
 )
-
-type crawledNode struct {
-	node         nodeJSON
-	info         *clientInfo
-	tooManyPeers bool
-}
-
-type clientInfo struct {
-	ClientType      string
-	SoftwareVersion uint64
-	Capabilities    []p2p.Cap
-	NetworkID       uint64
-	ForkID          forkid.ID
-	Blockheight     string
-	TotalDifficulty *big.Int
-	HeadHash        common.Hash
-}
 
 func crawlNodes(ctx *cli.Context) error {
 	var inputSet nodeSet
+	var geoipDB *geoip2.Reader
 
-	if nodesFile := ctx.String(nodeFileFlag.Name); nodesFile != "" {
-		if common.FileExist(nodesFile) {
-			inputSet = loadNodesJSON(nodesFile)
-		}
+	nodesFile := ctx.String(nodeFileFlag.Name)
+
+	if nodesFile != "" && common.FileExist(nodesFile) {
+		inputSet = loadNodesJSON(nodesFile)
 	}
 
 	var db *sql.DB
@@ -150,29 +127,111 @@ func crawlNodes(ctx *cli.Context) error {
 				panic(err)
 			}
 		}
-
 	}
+
 	timeout := ctx.Duration(timeoutFlag.Name)
 
+	nodeDB, err := enode.OpenDB(ctx.String(nodedbFlag.Name))
+	if err != nil {
+		panic(err)
+	}
+
+	if geoipFile := ctx.String(geoipdbFlag.Name); geoipFile != "" {
+		geoipDB, err = geoip2.Open(geoipFile)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = geoipDB.Close() }()
+	}
+
 	for {
-		inputSet = crawlRound(ctx, inputSet, db, timeout)
+		inputSet = crawlRound(ctx, inputSet, db, geoipDB, nodeDB, timeout)
+		if nodesFile != "" {
+			writeNodesJSON(nodesFile, inputSet)
+		}
 	}
 }
 
-func discv5(ctx *cli.Context, inputSet nodeSet, timeout time.Duration) nodeSet {
-	disc := startV5(ctx)
-	defer disc.Close()
-	// Crawl the DHT for some time
-	c := newCrawler(inputSet, disc, disc.RandomNodes())
-	c.revalidateInterval = 10 * time.Minute
-	return c.run(timeout)
+func crawlRound(ctx *cli.Context, inputSet nodeSet, db *sql.DB, geoipDB *geoip2.Reader, nodeDB *enode.DB, timeout time.Duration) nodeSet {
+	var v4, v5 nodeSet
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		v5 = discv5(ctx, nodeDB, inputSet, timeout)
+		log.Info("DiscV5", "nodes", len(v5.nodes()))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		v4 = discv4(ctx, nodeDB, inputSet, timeout)
+		log.Info("DiscV4", "nodes", len(v4.nodes()))
+	}()
+
+	wg.Wait()
+
+	output := make(nodeSet, len(v5)+len(v4))
+	for _, n := range v5 {
+		output[n.N.ID()] = n
+	}
+	for _, n := range v4 {
+		output[n.N.ID()] = n
+	}
+
+	var nodes []nodeJSON
+	for _, node := range output {
+		nodes = append(nodes, node)
+	}
+
+	// Write the node info to influx
+	if db != nil {
+		if err := updateNodes(db, geoipDB, nodes); err != nil {
+			panic(err)
+		}
+	}
+	return output
 }
 
-func discv4(ctx *cli.Context, inputSet nodeSet, timeout time.Duration) nodeSet {
-	disc := startV4(ctx)
+func discv5(ctx *cli.Context, db *enode.DB, inputSet nodeSet, timeout time.Duration) nodeSet {
+	ln, config := makeDiscoveryConfig(ctx, db)
+
+	socket := listen(ln, ctx.String(listenAddrFlag.Name))
+
+	disc, err := discover.ListenV5(socket, ln, config)
+	if err != nil {
+		panic(err)
+	}
 	defer disc.Close()
+
+	return runCrawler(ctx, disc, inputSet, timeout)
+}
+
+func discv4(ctx *cli.Context, db *enode.DB, inputSet nodeSet, timeout time.Duration) nodeSet {
+	ln, config := makeDiscoveryConfig(ctx, db)
+
+	socket := listen(ln, ctx.String(listenAddrFlag.Name))
+
+	disc, err := discover.ListenV4(socket, ln, config)
+	if err != nil {
+		panic(err)
+	}
+	defer disc.Close()
+
+	return runCrawler(ctx, disc, inputSet, timeout)
+}
+
+func runCrawler(ctx *cli.Context, disc resolver, inputSet nodeSet, timeout time.Duration) nodeSet {
+	genesis := makeGenesis(ctx)
+	if genesis == nil {
+		genesis = core.DefaultGenesisBlock()
+	}
+	networkID := ctx.Uint64(utils.NetworkIdFlag.Name)
+	nodeURL := ctx.String(nodeURLFlag.Name)
+
 	// Crawl the DHT for some time
-	c := newCrawler(inputSet, disc, disc.RandomNodes())
+	c := newCrawler(genesis, networkID, nodeURL, inputSet, disc, disc.RandomNodes())
 	c.revalidateInterval = 10 * time.Minute
 	return c.run(timeout)
 }
@@ -190,333 +249,4 @@ func makeGenesis(ctx *cli.Context) *core.Genesis {
 	default:
 		return core.DefaultGenesisBlock()
 	}
-}
-
-func crawlRound(ctx *cli.Context, inputSet nodeSet, db *sql.DB, timeout time.Duration) nodeSet {
-	output := make(nodeSet)
-	v5 := discv5(ctx, nodeSet{}, timeout)
-	output.add(v5.nodes()...)
-	log.Info("DiscV5", "nodes", len(v5.nodes()))
-	v4 := discv4(ctx, nodeSet{}, timeout)
-	output.add(v4.nodes()...)
-	log.Info("DiscV4", "nodes", len(v4.nodes()))
-
-	genesis := makeGenesis(ctx)
-	if genesis == nil {
-		genesis = core.DefaultGenesisBlock()
-	}
-	networkID := ctx.Uint64(utils.NetworkIdFlag.Name)
-	nodeURL := ctx.String(nodeURLFlag.Name)
-
-	reqChan := make(chan nodeJSON, len(output))
-	respChan := make(chan crawledNode, 10)
-	getNodeLoop := func(in <-chan nodeJSON, out chan<- crawledNode) {
-		for {
-			node := <-in
-			info, err := getClientInfo(genesis, networkID, nodeURL, node.N)
-			tooManyPeers := false
-			if err != nil {
-				log.Warn("GetClientInfo failed", "error", err, "nodeID", node.N.ID())
-				if strings.Contains(err.Error(), "too many peers") {
-					tooManyPeers = true
-				}
-			} else {
-				log.Info("GetClientInfo succeeded")
-			}
-			out <- crawledNode{node: node, info: info, tooManyPeers: tooManyPeers}
-		}
-	}
-	// Schedule 10 workers
-	for i := 0; i < 10; i++ {
-		go getNodeLoop(reqChan, respChan)
-	}
-
-	// Try to connect and get the status of all nodes
-	for _, node := range output {
-		reqChan <- node
-	}
-	var nodes []crawledNode
-	for i := 0; i < len(output); i++ {
-		node := <-respChan
-		nodes = append(nodes, node)
-	}
-	// Write the node info to influx
-	if db != nil {
-		if err := updateNodes(db, nodes); err != nil {
-			panic(err)
-		}
-	}
-	return output
-}
-
-func getClientInfo(genesis *core.Genesis, networkID uint64, nodeURL string, n *enode.Node) (*clientInfo, error) {
-	var info clientInfo
-	conn, sk, err := dial(n)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-	conn.SetDeadline(time.Now().Add(5 * time.Second))
-
-	// write hello to client
-	pub0 := crypto.FromECDSAPub(&sk.PublicKey)[1:]
-	ourHandshake := &Hello{
-		Version: 5,
-		Caps: []p2p.Cap{
-			{Name: "eth", Version: 64},
-			{Name: "eth", Version: 65},
-			{Name: "eth", Version: 66},
-		},
-		ID: pub0,
-	}
-	if err := conn.Write(ourHandshake); err != nil {
-		return nil, err
-	}
-
-	// read hello from client
-	switch msg := conn.Read().(type) {
-	case *Hello:
-		// set snappy if version is at least 5
-		if msg.Version >= 5 {
-			conn.SetSnappy(true)
-		}
-		info.Capabilities = msg.Caps
-		info.SoftwareVersion = msg.Version
-		info.ClientType = msg.Name
-	case *Disconnect:
-		return nil, fmt.Errorf("bad hello handshake: %v", msg.Reason.Error())
-	case *Error:
-		return nil, fmt.Errorf("bad hello handshake: %v", msg.Error())
-	default:
-		return nil, fmt.Errorf("bad hello handshake: %v", msg.Code())
-	}
-	highestEthVersion := uint32(negotiateEthProtocol(ourHandshake.Caps, info.Capabilities))
-	// If node provides no eth version, we can skip it.
-	if highestEthVersion == 0 {
-		return &info, nil
-	}
-	conn.SetDeadline(time.Now().Add(15 * time.Second))
-	// write status message, if we have a backing node
-	if len(nodeURL) > 0 {
-		// write status message
-		if status, err := getStatus(genesis.Config, genesis.ToBlock(nil).Hash(), networkID, nodeURL); err != nil {
-			log.Error("Local node failed to respond", "err", err)
-		} else {
-			status.ProtocolVersion = highestEthVersion
-			if err := conn.Write(status); err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	// Regardless of whether we wrote a status message or not, the remote side
-	// might still send us one.
-
-	// read status message from client
-	switch msg := conn.Read().(type) {
-	case *Status:
-		info.ForkID = msg.ForkID
-		info.HeadHash = msg.Head
-		info.NetworkID = msg.NetworkID
-		// m.ProtocolVersion
-		info.TotalDifficulty = msg.TD
-		// Set correct TD if received TD is higher
-		if msg.TD.Cmp(status.TD) > 0 {
-			status.TD = msg.TD
-		}
-	case *Disconnect:
-		return nil, fmt.Errorf("bad status handshake: %v", msg.Reason.Error())
-	case *Error:
-		return nil, fmt.Errorf("bad status handshake: %v", msg.Error())
-	default:
-		return nil, fmt.Errorf("bad status handshake: %v", msg.Code())
-	}
-
-	// Disconnect from client
-	conn.Write(Disconnect{Reason: p2p.DiscQuitting})
-
-	return &info, nil
-}
-
-// dial attempts to dial the given node and perform a handshake,
-func dial(n *enode.Node) (*Conn, *ecdsa.PrivateKey, error) {
-	var conn Conn
-	// dial
-	fd, err := net.Dial("tcp", fmt.Sprintf("%v:%d", n.IP(), n.TCP()))
-	if err != nil {
-		return nil, nil, err
-	}
-	conn.Conn = rlpx.NewConn(fd, n.Pubkey())
-	// do encHandshake
-	ourKey, _ := crypto.GenerateKey()
-	_, err = conn.Handshake(ourKey)
-	if err != nil {
-		return nil, nil, err
-	}
-	return &conn, ourKey, nil
-}
-
-func getStatus(config *params.ChainConfig, genesis common.Hash, network uint64, nodeURL string) (*Status, error) {
-	if status == nil {
-		status = &Status{
-			ProtocolVersion: 66,
-			NetworkID:       network,
-			TD:              big.NewInt(0),
-			Head:            common.Hash{},
-			Genesis:         genesis,
-			ForkID:          forkid.NewID(config, genesis, 0),
-		}
-		lastStatusUpdate = time.Time{}
-	}
-
-	if time.Since(lastStatusUpdate) > 15*time.Second {
-		header, err := getBCState(nodeURL)
-		if err != nil {
-			return nil, err
-		}
-		status.Head = header.Hash()
-		status.ForkID = forkid.NewID(config, genesis, header.Number.Uint64())
-	}
-	return status, nil
-}
-
-func getBCState(nodeURL string) (*types.Header, error) {
-	cl, err := ethclient.Dial(nodeURL)
-	if err != nil {
-		return nil, err
-	}
-
-	return cl.HeaderByNumber(context.Background(), nil)
-}
-
-// negotiateEthProtocol sets the Conn's eth protocol version
-// to highest advertised capability from peer
-func negotiateEthProtocol(caps, peer []p2p.Cap) uint {
-	var highestEthVersion uint
-	for _, capability := range peer {
-		if capability.Name != "eth" {
-			continue
-		}
-		if capability.Version > highestEthVersion && capability.Version <= caps[len(caps)-1].Version {
-			highestEthVersion = capability.Version
-		}
-	}
-	return highestEthVersion
-}
-
-func updateNodes(db *sql.DB, nodes []crawledNode) error {
-	log.Info("Writing nodes to db", "nodes", len(nodes))
-	now := time.Now()
-	tx, err := db.Begin()
-	if err != nil {
-		return err
-	}
-	stmt, err := tx.Prepare(
-		`insert into nodes(ID, 
-			Now,
-			ClientType,
-			PK,
-			SoftwareVersion,
-			Capabilities,
-			NetworkID,
-			ForkID,
-			Blockheight,
-			TotalDifficulty,
-			HeadHash,
-			IP,
-			FirstSeen,
-			LastSeen,
-			Seq,
-			Score,
-			ConnType) 
-			values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-	for _, node := range nodes {
-		n := node.node
-		info := &clientInfo{}
-		if node.info != nil {
-			info = node.info
-		}
-		if info.ClientType == "" && node.tooManyPeers {
-			info.ClientType = "tmp"
-		}
-		connType := ""
-		var portUDP enr.UDP
-		if n.N.Load(&portUDP) == nil {
-			connType = "UDP"
-		}
-		var portTCP enr.TCP
-		if n.N.Load(&portTCP) == nil {
-			connType = "TCP"
-		}
-		var eth2 ETH2
-		if n.N.Load((&eth2)) == nil {
-			info.ClientType = "eth2"
-		}
-		var caps string
-		for _, c := range info.Capabilities {
-			caps = fmt.Sprintf("%v, %v", caps, c.String())
-		}
-		var pk string
-		if n.N.Pubkey() != nil {
-			pk = fmt.Sprintf("X: %v, Y: %v", n.N.Pubkey().X.String(), n.N.Pubkey().Y.String())
-		}
-		fid := fmt.Sprintf("Hash: %v, Next %v", info.ForkID.Hash, info.ForkID.Next)
-
-		_, err = stmt.Exec(
-			n.N.ID().String(),
-			now.String(),
-			info.ClientType,
-			pk,
-			info.SoftwareVersion,
-			caps,
-			info.NetworkID,
-			fid,
-			info.Blockheight,
-			info.TotalDifficulty.String(),
-			info.HeadHash.String(),
-			n.N.IP().String(),
-			n.FirstResponse.String(),
-			n.LastResponse.String(),
-			n.Seq,
-			n.Score,
-			connType,
-		)
-		if err != nil {
-			return err
-		}
-	}
-
-	return tx.Commit()
-}
-
-func createDB(db *sql.DB) error {
-	sqlStmt := `
-	CREATE TABLE nodes (
-		ID text not null, 
-		Now text not null,
-		ClientType text,
-		PK text,
-		SoftwareVersion text,
-		Capabilities text,
-		NetworkID number,
-		ForkID text,
-		Blockheight text,
-		TotalDifficulty text,
-		HeadHash text,
-		IP text,
-		FirstSeen text,
-		LastSeen text,
-		Seq number,
-		Score number,
-		ConnType text,
-		PRIMARY KEY (ID, Now)
-	);
-	delete from nodes;
-	`
-	_, err := db.Exec(sqlStmt)
-	return err
 }
