@@ -67,23 +67,25 @@ func InsertCrawledNodes(db *sql.DB, crawledNodes []input.CrawledNode) error {
 
 	for _, node := range crawledNodes {
 		parsed := parser.ParseVersionString(node.ClientType)
-		_, err = stmt.Exec(
-			node.ID,
-			parsed.Name,
-			parsed.Version.Major,
-			parsed.Version.Minor,
-			parsed.Version.Patch,
-			parsed.Version.Tag,
-			parsed.Version.Build,
-			parsed.Version.Date,
-			parsed.Os.Os,
-			parsed.Os.Architecture,
-			parsed.Language.Name,
-			parsed.Language.Version,
-			time.Now(),
-		)
-		if err != nil {
-			panic(err)
+		if parsed != nil {
+			_, err = stmt.Exec(
+				node.ID,
+				parsed.Name,
+				parsed.Version.Major,
+				parsed.Version.Minor,
+				parsed.Version.Patch,
+				parsed.Version.Tag,
+				parsed.Version.Build,
+				parsed.Version.Date,
+				parsed.Os.Os,
+				parsed.Os.Architecture,
+				parsed.Language.Name,
+				parsed.Language.Version,
+				time.Now(),
+			)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 	return tx.Commit()

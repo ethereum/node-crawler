@@ -14,6 +14,7 @@ type Version struct {
 	Tag   string
 	Build string
 	Date  string
+	Error bool
 }
 
 type OSInfo struct {
@@ -40,14 +41,25 @@ func (p *ParsedInfo) String() string {
 	return fmt.Sprintf("%v (%v) %v %v", p.Name, p.Version, p.Os, p.Language)
 }
 
-func ParseVersionString(input string) ParsedInfo {
+func ParseVersionString(input string) *ParsedInfo {
 	var output ParsedInfo
+
+	// Quick fix to filter out enodes.
+	if strings.Contains(input, "enode://") {
+		return nil
+	}
+
+	// If there exists more than one version, don't count it
+	if strings.Count(input, "/v") > 1 {
+		return nil
+	}
+
 	// version string consists of four components, divided by /
 	s := strings.Split(strings.ToLower(input), "/")
 	l := len(s)
 	output.Name = strings.ToLower(s[0])
 	if output.Name == "" {
-		output.Name = "tmp"
+		return nil
 	}
 
 	if l == 5 || l == 7 {
@@ -64,7 +76,12 @@ func ParseVersionString(input string) ParsedInfo {
 	} else {
 		fmt.Printf("Parser Error: Invalid length of '%d' for input: '%s'\n", l, input)
 	}
-	return output
+
+	if output.Version.Error {
+		fmt.Printf(" -> Error Parsing: '%s', %v\n", input, output)
+		return nil
+	}
+	return &output
 }
 
 func parseLanguage(input string) LanguageInfo {
@@ -113,7 +130,8 @@ func parseVersion(input string) Version {
 	}
 
 	if vers.Major == 0 && vers.Minor == 0 && vers.Patch == 0 {
-		fmt.Println(len(split), "Version string is invalid:", input)
+		fmt.Println("Version string is invalid:", input)
+		vers.Error = true
 	}
 	
 	return vers
