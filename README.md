@@ -52,7 +52,14 @@ To deploy this web app:
 
 ### Backend API
 
-Download latest golang.
+The API is using 2 databases. 1 of them is the raw data from the crawler and the other one is the API database.
+Data will be moved from the crawler DB to the API DB regularly by this binary.
+Make sure to start the crawler before the API if you intend to run them together during development.
+
+#### Dependencies
+
+- golang
+- sqlite3
 
 #### Development
 ```
@@ -91,9 +98,18 @@ go run ./ .
    ```
 ### Crawler
 
+#### Dependencies
+
+- golang
+- sqlite3
+
+##### Country location
+
+- `GeoLite2-Country.mmdb` file from [https://dev.maxmind.com/geoip/geolite2-free-geolocation-data?lang=en](https://dev.maxmind.com/geoip/geolite2-free-geolocation-data?lang=en)
+	- you will have to create an account to get access to this file
+
 #### Development
 
-Backend for crawling the network also requires golang installed.
 ```
 cd crawler
 go run .
@@ -109,9 +125,18 @@ Build crawler and copy the binary to `/usr/bin`.
 go build -o /usr/bin/
 ```
 Create a systemd service similarly to above API example. In executed command, override default settings by pointing crawler database to chosen path and setting period to write crawled nodes. 
+If you want to get the country that a Node is in you have to specify the location the geoIP database as well.
+
+##### No GeoIP
 ```
 crawler crawl --timeout 10m --table /path/to/database
 ```
+##### With GeoIP
+
+```
+crawler crawl --timeout 10m --table /path/to/database --geoipdb GeoLite2-Country.mmdb
+```
+
 ### Docker setup
 
 Production build of preconfigured software stack can be easily deployed with Docker. To achieve this, clone this repository and access `docker` directory. 
