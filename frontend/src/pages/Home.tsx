@@ -34,6 +34,7 @@ interface ClientData {
   operatingSystemsUnknown: number;
   languages: NamedCount[];
   languagesUnknown: number;
+  countries: NamedCount[];
 }
 
 function Home() {
@@ -74,6 +75,7 @@ function Home() {
       const [clients, unknownClientCount] = appendOtherGroup(json.clients)
       const [languages, unknownLanguageCount] = appendOtherGroup(json.languages)
       const [operatingSystems, unknownOperatingSystemCount] = appendOtherGroup(json.operatingSystems)
+      const [countries] = appendOtherGroup(json.countries)
 
       json.versions = versions
       json.versionsUnknown = unknownVersionsCount
@@ -83,6 +85,7 @@ function Home() {
       json.languagesUnknown = unknownLanguageCount
       json.operatingSystems = operatingSystems
       json.operatingSystemsUnknown = unknownOperatingSystemCount
+      json.countries = countries;
 
       setData(json)
     }
@@ -232,6 +235,33 @@ function Home() {
           </CustomResponsiveContainer>
         )}
       </Card>
+      <GridItem colSpan={LayoutTwoColSpan}>
+        <Card title="Countries" contentHeight={data.countries.length * 40}>
+          {data.countries.length === 0 && (
+            <Center flex={1}>No data available</Center>
+          )}
+          {data.countries.length > 0 && (
+            <CustomResponsiveContainer>
+              <BarChart
+                data={data.countries}
+                layout="vertical"
+                margin={{ left: 60, right: 30 }}
+                onClick={data.versions.length ? onVersionClicked : onClientClicked}
+              >
+                <XAxis type="number" hide stroke={color} />
+                <YAxis dataKey="name" type="category" interval={0} stroke={color} />
+                <Tooltip cursor={false} content={renderTooltipContent} />
+                <Bar dataKey="count">
+                  {data.countries.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={colors[index % 10]} />
+                  ))}
+                  <LabelList position="right" />
+                </Bar>
+              </BarChart>
+            </CustomResponsiveContainer>
+          )}
+        </Card>
+      </GridItem>
     </Grid>
   );
 }
