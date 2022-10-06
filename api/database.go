@@ -25,6 +25,7 @@ func createDB(db *sql.DB) error {
 		language_name text,
 		language_version text,
 		last_crawled datetime,
+		country_name text,
 		PRIMARY KEY (ID)
 	);
 	delete from nodes;
@@ -46,8 +47,8 @@ func InsertCrawledNodes(db *sql.DB, crawledNodes []input.CrawledNode) error {
 			name, 
 			version_major, version_minor, version_patch, version_tag, version_build, version_date, 
 			os_name, os_architecture, 
-			language_name, language_version, last_crawled) 
-			values(?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(ID) DO UPDATE SET 
+			language_name, language_version, last_crawled, country_name)
+			values(?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(ID) DO UPDATE SET 
 			name=excluded.name,
 			version_major=excluded.version_major,
 			version_minor=excluded.version_minor,
@@ -59,7 +60,8 @@ func InsertCrawledNodes(db *sql.DB, crawledNodes []input.CrawledNode) error {
 			os_architecture=excluded.os_architecture,
 			language_name=excluded.language_name,
 			language_version=excluded.language_version,
-			last_crawled=excluded.last_crawled
+			last_crawled=excluded.last_crawled,
+			country_name=excluded.country_name
 			WHERE name=excluded.name OR excluded.name != "unknown"`)
 	if err != nil {
 		return err
@@ -82,6 +84,7 @@ func InsertCrawledNodes(db *sql.DB, crawledNodes []input.CrawledNode) error {
 				parsed.Language.Name,
 				parsed.Language.Version,
 				time.Now(),
+				node.Country,
 			)
 			if err != nil {
 				panic(err)
