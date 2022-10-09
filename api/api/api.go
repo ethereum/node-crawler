@@ -125,6 +125,7 @@ type result struct {
 	Languages        []client `json:"languages"`
 	OperatingSystems []client `json:"operatingSystems"`
 	Versions         []client `json:"versions"`
+	Countries	 []client `json:"countries"`
 }
 
 func (a *Api) cachedOrQuery(prefix, query string, whereArgs []interface{}) []client {
@@ -154,11 +155,12 @@ func toQuery(query string, whereArgs []interface{}) string {
 	return res
 }
 
-func (a *Api) storeCache(clientQuery, languageQuery, osQuery, versionQuery string, whereArgs []interface{}, r result) {
+func (a *Api) storeCache(clientQuery, languageQuery, osQuery, countryQuery, versionQuery string, whereArgs []interface{}, r result) {
 	a.cache.Add("c"+toQuery(clientQuery, whereArgs), r.Clients)
 	a.cache.Add("l"+toQuery(languageQuery, whereArgs), r.Languages)
 	a.cache.Add("o"+toQuery(osQuery, whereArgs), r.OperatingSystems)
 	a.cache.Add("v"+toQuery(versionQuery, whereArgs), r.Versions)
+	a.cache.Add("co"+toQuery(versionQuery, whereArgs), r.Countries)
 }
 
 func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
@@ -189,17 +191,19 @@ func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 	topClientsQuery := fmt.Sprintf("SELECT name as Name, COUNT(name) as Count FROM nodes %v GROUP BY name ORDER BY count DESC", where)
 	topOsQuery := fmt.Sprintf("SELECT os_name as Name, COUNT(os_name) as Count FROM nodes %v GROUP BY os_name ORDER BY count DESC", where)
 	topVersionQuery := fmt.Sprintf("SELECT Name, Count(*) as Count FROM (SELECT version_major || '.' || version_minor || '.' || version_patch as Name FROM nodes %v) GROUP BY Name ORDER BY Count DESC ", where)
+	topCountriesQuery := fmt.Sprintf("SELECT country_name as Name, COUNT(country_name) as Count FROM nodes %v GROUP BY country_name ORDER BY count DESC", where)
 
 	clients := a.cachedOrQuery("c", topClientsQuery, whereArgs)
 	language := a.cachedOrQuery("l", topLanguageQuery, whereArgs)
 	operatingSystems := a.cachedOrQuery("o", topOsQuery, whereArgs)
+	countries := a.cachedOrQuery("co", topCountriesQuery, whereArgs)
 	var versions []client
 	if nameCountInQuery == 1 {
 		versions = a.cachedOrQuery("v", topVersionQuery, whereArgs)
 	}
 
-	res := result{Clients: clients, Languages: language, OperatingSystems: operatingSystems, Versions: versions}
-	a.storeCache(topClientsQuery, topLanguageQuery, topOsQuery, topVersionQuery, whereArgs, res)
+	res := result{Clients: clients, Languages: language, OperatingSystems: operatingSystems, Versions: versions, Countries: countries}
+	a.storeCache(topClientsQuery, topLanguageQuery, topOsQuery, topCountriesQuery, topVersionQuery, whereArgs, res)
 	json.NewEncoder(rw).Encode(res)
 }
 
@@ -234,6 +238,7 @@ func validateKey(key string) bool {
 		"os_architecture":  {},
 		"language_name":    {},
 		"language_version": {},
+		"country": {},
 	}
 	_, ok := validKeys[key]
 	return ok
