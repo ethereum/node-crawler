@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 
 	"github.com/oschwald/geoip2-golang"
 
@@ -33,30 +33,29 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var (
-	crawlerCommand = cli.Command{
+	crawlerCommand = &cli.Command{
 		Name:      "crawl",
 		Usage:     "Crawl the ethereum network",
 		ArgsUsage: "<nodefile>",
 		Action:    crawlNodes,
 		Flags: []cli.Flag{
 			utils.MainnetFlag,
-			utils.RopstenFlag,
-			utils.RinkebyFlag,
 			utils.GoerliFlag,
+			utils.SepoliaFlag,
 			utils.NetworkIdFlag,
-			bootnodesFlag,
-			nodeURLFlag,
-			nodeFileFlag,
-			timeoutFlag,
-			tableNameFlag,
-			listenAddrFlag,
-			nodekeyFlag,
-			nodedbFlag,
-			geoipdbFlag,
+			&bootnodesFlag,
+			&nodeURLFlag,
+			&nodeFileFlag,
+			&timeoutFlag,
+			&tableNameFlag,
+			&listenAddrFlag,
+			&nodekeyFlag,
+			&nodedbFlag,
+			&geoipdbFlag,
 		},
 	}
 	bootnodesFlag = cli.StringFlag{
@@ -117,7 +116,7 @@ func crawlNodes(ctx *cli.Context) error {
 			shouldInit = true
 		}
 		var err error
-		if db, err = sql.Open("sqlite3", name); err != nil {
+		if db, err = sql.Open("sqlite", name); err != nil {
 			panic(err)
 		}
 		log.Info("Connected to db")
@@ -240,10 +239,8 @@ func runCrawler(ctx *cli.Context, disc resolver, inputSet nodeSet, timeout time.
 // with local flags instead of global flags.
 func makeGenesis(ctx *cli.Context) *core.Genesis {
 	switch {
-	case ctx.Bool(utils.RopstenFlag.Name):
-		return core.DefaultRopstenGenesisBlock()
-	case ctx.Bool(utils.RinkebyFlag.Name):
-		return core.DefaultRinkebyGenesisBlock()
+	case ctx.Bool(utils.SepoliaFlag.Name):
+		return core.DefaultSepoliaGenesisBlock()
 	case ctx.Bool(utils.GoerliFlag.Name):
 		return core.DefaultGoerliGenesisBlock()
 	default:

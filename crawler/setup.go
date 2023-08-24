@@ -13,7 +13,7 @@ import (
 	"github.com/fjl/memsize/memsizeui"
 	"github.com/mattn/go-colorable"
 	"github.com/mattn/go-isatty"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 var Memsize memsizeui.Handler
@@ -77,18 +77,18 @@ var (
 
 // Flags holds all command-line flags required for debugging.
 var Flags = []cli.Flag{
-	verbosityFlag,
-	vmoduleFlag,
-	logjsonFlag,
-	backtraceAtFlag,
-	debugFlag,
-	pprofFlag,
-	pprofAddrFlag,
-	pprofPortFlag,
-	memprofilerateFlag,
-	blockprofilerateFlag,
-	cpuprofileFlag,
-	traceFlag,
+	&verbosityFlag,
+	&vmoduleFlag,
+	&logjsonFlag,
+	&backtraceAtFlag,
+	&debugFlag,
+	&pprofFlag,
+	&pprofAddrFlag,
+	&pprofPortFlag,
+	&memprofilerateFlag,
+	&blockprofilerateFlag,
+	&cpuprofileFlag,
+	&traceFlag,
 }
 
 var glogger *log.GlogHandler
@@ -104,7 +104,7 @@ func init() {
 func Setup(ctx *cli.Context) error {
 	var ostream log.Handler
 	output := io.Writer(os.Stderr)
-	if ctx.GlobalBool(logjsonFlag.Name) {
+	if ctx.Bool(logjsonFlag.Name) {
 		ostream = log.StreamHandler(output, log.JSONFormat())
 	} else {
 		usecolor := (isatty.IsTerminal(os.Stderr.Fd()) || isatty.IsCygwinTerminal(os.Stderr.Fd())) && os.Getenv("TERM") != "dumb"
@@ -116,38 +116,38 @@ func Setup(ctx *cli.Context) error {
 	glogger.SetHandler(ostream)
 
 	// logging
-	verbosity := ctx.GlobalInt(verbosityFlag.Name)
+	verbosity := ctx.Int(verbosityFlag.Name)
 	glogger.Verbosity(log.Lvl(verbosity))
-	vmodule := ctx.GlobalString(vmoduleFlag.Name)
+	vmodule := ctx.String(vmoduleFlag.Name)
 	glogger.Vmodule(vmodule)
 
-	debug := ctx.GlobalBool(debugFlag.Name)
-	if ctx.GlobalIsSet(debugFlag.Name) {
-		debug = ctx.GlobalBool(debugFlag.Name)
+	debug := ctx.Bool(debugFlag.Name)
+	if ctx.IsSet(debugFlag.Name) {
+		debug = ctx.Bool(debugFlag.Name)
 	}
 	log.PrintOrigins(debug)
 
-	backtrace := ctx.GlobalString(backtraceAtFlag.Name)
+	backtrace := ctx.String(backtraceAtFlag.Name)
 	glogger.BacktraceAt(backtrace)
 
 	log.Root().SetHandler(glogger)
 
 	// profiling, tracing
 	runtime.MemProfileRate = memprofilerateFlag.Value
-	if ctx.GlobalIsSet(memprofilerateFlag.Name) {
-		runtime.MemProfileRate = ctx.GlobalInt(memprofilerateFlag.Name)
+	if ctx.IsSet(memprofilerateFlag.Name) {
+		runtime.MemProfileRate = ctx.Int(memprofilerateFlag.Name)
 	}
 
 	// pprof server
-	if ctx.GlobalBool(pprofFlag.Name) {
-		listenHost := ctx.GlobalString(pprofAddrFlag.Name)
+	if ctx.Bool(pprofFlag.Name) {
+		listenHost := ctx.String(pprofAddrFlag.Name)
 
-		port := ctx.GlobalInt(pprofPortFlag.Name)
+		port := ctx.Int(pprofPortFlag.Name)
 
 		address := fmt.Sprintf("%s:%d", listenHost, port)
 		// This context value ("metrics.addr") represents the utils.MetricsHTTPFlag.Name.
 		// It cannot be imported because it will cause a cyclical dependency.
-		StartPProf(address, !ctx.GlobalIsSet("metrics.addr"))
+		StartPProf(address, !ctx.IsSet("metrics.addr"))
 	}
 	return nil
 }

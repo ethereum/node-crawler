@@ -18,6 +18,7 @@ package main
 
 import (
 	"crypto/ecdsa"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/eth/protocols/eth"
@@ -28,6 +29,7 @@ import (
 
 type Message interface {
 	Code() int
+	ReqID() uint64
 }
 
 type Error struct {
@@ -36,8 +38,10 @@ type Error struct {
 
 func (e *Error) Unwrap() error  { return e.err }
 func (e *Error) Error() string  { return e.err.Error() }
-func (e *Error) Code() int      { return -1 }
 func (e *Error) String() string { return e.Error() }
+
+func (e *Error) Code() int     { return -1 }
+func (e *Error) ReqID() uint64 { return 0 }
 
 func errorf(format string, args ...interface{}) *Error {
 	return &Error{fmt.Errorf(format, args...)}
@@ -55,83 +59,107 @@ type Hello struct {
 	Rest []rlp.RawValue `rlp:"tail"`
 }
 
-func (h Hello) Code() int { return 0x00 }
+func (msg Hello) Code() int     { return 0x00 }
+func (msg Hello) ReqID() uint64 { return 0 }
 
 // Disconnect is the RLP structure for a disconnect message.
 type Disconnect struct {
 	Reason p2p.DiscReason
 }
 
-func (d Disconnect) Code() int { return 0x01 }
+func (msg Disconnect) Code() int     { return 0x01 }
+func (msg Disconnect) ReqID() uint64 { return 0 }
 
 type Ping struct{}
 
-func (p Ping) Code() int { return 0x02 }
+func (msg Ping) Code() int     { return 0x02 }
+func (msg Ping) ReqID() uint64 { return 0 }
 
 type Pong struct{}
 
-func (p Pong) Code() int { return 0x03 }
+func (msg Pong) Code() int     { return 0x03 }
+func (msg Pong) ReqID() uint64 { return 0 }
 
 // Status is the network packet for the status message for eth/64 and later.
 type Status eth.StatusPacket
 
-func (s Status) Code() int { return 16 }
+func (msg Status) Code() int     { return 16 }
+func (msg Status) ReqID() uint64 { return 0 }
 
 // NewBlockHashes is the network packet for the block announcements.
 type NewBlockHashes eth.NewBlockHashesPacket
 
-func (nbh NewBlockHashes) Code() int { return 17 }
+func (msg NewBlockHashes) Code() int     { return 17 }
+func (msg NewBlockHashes) ReqID() uint64 { return 0 }
 
 type Transactions eth.TransactionsPacket
 
-func (t Transactions) Code() int { return 18 }
+func (msg Transactions) Code() int     { return 18 }
+func (msg Transactions) ReqID() uint64 { return 18 }
 
 // GetBlockHeaders represents a block header query.
-type GetBlockHeaders eth.GetBlockHeadersPacket
+type GetBlockHeaders eth.GetBlockHeadersPacket66
 
-func (g GetBlockHeaders) Code() int { return 19 }
+func (msg GetBlockHeaders) Code() int     { return 19 }
+func (msg GetBlockHeaders) ReqID() uint64 { return msg.RequestId }
 
-type BlockHeaders eth.BlockHeadersPacket
+type BlockHeaders eth.BlockHeadersPacket66
 
-func (bh BlockHeaders) Code() int { return 20 }
+func (msg BlockHeaders) Code() int     { return 20 }
+func (msg BlockHeaders) ReqID() uint64 { return msg.RequestId }
 
 // GetBlockBodies represents a GetBlockBodies request
-type GetBlockBodies eth.GetBlockBodiesPacket
+type GetBlockBodies eth.GetBlockBodiesPacket66
 
-func (gbb GetBlockBodies) Code() int { return 21 }
+func (msg GetBlockBodies) Code() int     { return 21 }
+func (msg GetBlockBodies) ReqID() uint64 { return msg.RequestId }
 
 // BlockBodies is the network packet for block content distribution.
-type BlockBodies eth.BlockBodiesPacket
+type BlockBodies eth.BlockBodiesPacket66
 
-func (bb BlockBodies) Code() int { return 22 }
+func (msg BlockBodies) Code() int     { return 22 }
+func (msg BlockBodies) ReqID() uint64 { return msg.RequestId }
 
 // NewBlock is the network packet for the block propagation message.
 type NewBlock eth.NewBlockPacket
 
-func (nb NewBlock) Code() int { return 23 }
+func (msg NewBlock) Code() int     { return 23 }
+func (msg NewBlock) ReqID() uint64 { return 0 }
+
+// NewPooledTransactionHashes66 is the network packet for the tx hash propagation message.
+type NewPooledTransactionHashes66 eth.NewPooledTransactionHashesPacket66
+
+func (msg NewPooledTransactionHashes66) Code() int     { return 24 }
+func (msg NewPooledTransactionHashes66) ReqID() uint64 { return 0 }
 
 // NewPooledTransactionHashes is the network packet for the tx hash propagation message.
-type NewPooledTransactionHashes eth.NewPooledTransactionHashesPacket
+type NewPooledTransactionHashes eth.NewPooledTransactionHashesPacket68
 
-func (nb NewPooledTransactionHashes) Code() int { return 24 }
+func (msg NewPooledTransactionHashes) Code() int     { return 24 }
+func (msg NewPooledTransactionHashes) ReqID() uint64 { return 0 }
 
-type GetPooledTransactions eth.GetPooledTransactionsPacket
+type GetPooledTransactions eth.GetPooledTransactionsPacket66
 
-func (gpt GetPooledTransactions) Code() int { return 25 }
+func (msg GetPooledTransactions) Code() int     { return 25 }
+func (msg GetPooledTransactions) ReqID() uint64 { return msg.RequestId }
 
-type PooledTransactions eth.PooledTransactionsPacket
+type PooledTransactions eth.PooledTransactionsPacket66
 
-func (pt PooledTransactions) Code() int { return 26 }
+func (msg PooledTransactions) Code() int     { return 26 }
+func (msg PooledTransactions) ReqID() uint64 { return msg.RequestId }
 
 // Conn represents an individual connection with a peer
 type Conn struct {
 	*rlpx.Conn
-	ourKey                 *ecdsa.PrivateKey
-	negotiatedProtoVersion uint
-	ourHighestProtoVersion uint
-	caps                   []p2p.Cap
+	ourKey                     *ecdsa.PrivateKey
+	negotiatedProtoVersion     uint
+	negotiatedSnapProtoVersion uint
+	ourHighestProtoVersion     uint
+	ourHighestSnapProtoVersion uint
+	caps                       []p2p.Cap
 }
 
+// Read reads an eth66 packet from the connection.
 func (c *Conn) Read() Message {
 	code, rawData, _, err := c.Conn.Read()
 	if err != nil {
@@ -147,46 +175,80 @@ func (c *Conn) Read() Message {
 	case (Pong{}).Code():
 		msg = new(Pong)
 	case (Disconnect{}).Code():
+		if len(rawData) == 1 {
+			return &Disconnect{
+				Reason: p2p.DiscReason(rawData[0]),
+			}
+		}
 		msg = new(Disconnect)
 	case (Status{}).Code():
 		msg = new(Status)
 	case (GetBlockHeaders{}).Code():
-		msg = new(GetBlockHeaders)
+		ethMsg := new(eth.GetBlockHeadersPacket66)
+		if err := rlp.DecodeBytes(rawData, ethMsg); err != nil {
+			return errorf("could not rlp decode message: %v", err)
+		}
+		return (*GetBlockHeaders)(ethMsg)
 	case (BlockHeaders{}).Code():
-		msg = new(BlockHeaders)
+		ethMsg := new(eth.BlockHeadersPacket66)
+		if err := rlp.DecodeBytes(rawData, ethMsg); err != nil {
+			return errorf("could not rlp decode message: %v", err)
+		}
+		return (*BlockHeaders)(ethMsg)
 	case (GetBlockBodies{}).Code():
-		msg = new(GetBlockBodies)
+		ethMsg := new(eth.GetBlockBodiesPacket66)
+		if err := rlp.DecodeBytes(rawData, ethMsg); err != nil {
+			return errorf("could not rlp decode message: %v", err)
+		}
+		return (*GetBlockBodies)(ethMsg)
 	case (BlockBodies{}).Code():
-		msg = new(BlockBodies)
+		ethMsg := new(eth.BlockBodiesPacket66)
+		if err := rlp.DecodeBytes(rawData, ethMsg); err != nil {
+			return errorf("could not rlp decode message: %v", err)
+		}
+		return (*BlockBodies)(ethMsg)
 	case (NewBlock{}).Code():
 		msg = new(NewBlock)
 	case (NewBlockHashes{}).Code():
 		msg = new(NewBlockHashes)
 	case (Transactions{}).Code():
 		msg = new(Transactions)
-	case (NewPooledTransactionHashes{}).Code():
-		msg = new(NewPooledTransactionHashes)
+	case (NewPooledTransactionHashes66{}).Code():
+		// Try decoding to eth68
+		ethMsg := new(NewPooledTransactionHashes)
+		if err := rlp.DecodeBytes(rawData, ethMsg); err == nil {
+			return ethMsg
+		}
+		msg = new(NewPooledTransactionHashes66)
 	case (GetPooledTransactions{}.Code()):
-		msg = new(GetPooledTransactions)
+		ethMsg := new(eth.GetPooledTransactionsPacket66)
+		if err := rlp.DecodeBytes(rawData, ethMsg); err != nil {
+			return errorf("could not rlp decode message: %v", err)
+		}
+		return (*GetPooledTransactions)(ethMsg)
 	case (PooledTransactions{}.Code()):
-		msg = new(PooledTransactions)
+		ethMsg := new(eth.PooledTransactionsPacket66)
+		if err := rlp.DecodeBytes(rawData, ethMsg); err != nil {
+			return errorf("could not rlp decode message: %v", err)
+		}
+		return (*PooledTransactions)(ethMsg)
 	default:
-		return errorf("invalid message code: %d", code)
+		msg = errorf("invalid message code: %d", code)
 	}
-	// if message is devp2p, decode here
-	if err := rlp.DecodeBytes(rawData, msg); err != nil {
-		return errorf("could not rlp decode message: %v", err)
+
+	if msg != nil {
+		if err := rlp.DecodeBytes(rawData, msg); err != nil {
+			fmt.Println(hex.EncodeToString(rawData))
+			return errorf("could not rlp decode message: %v", err)
+		}
+		return msg
 	}
-	return msg
+	return errorf("invalid message: %s", string(rawData))
 }
 
+// Write writes a eth packet to the connection.
 func (c *Conn) Write(msg Message) error {
-	// check if message is eth protocol message
-	var (
-		payload []byte
-		err     error
-	)
-	payload, err = rlp.EncodeToBytes(msg)
+	payload, err := rlp.EncodeToBytes(msg)
 	if err != nil {
 		return err
 	}

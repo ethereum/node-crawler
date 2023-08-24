@@ -67,7 +67,7 @@ func getClientInfo(genesis *core.Genesis, networkID uint64, nodeURL string, n *e
 		return nil, errors.Wrap(err, "cannot set conn deadline")
 	}
 
-	s := getStatus(genesis.Config, uint32(conn.negotiatedProtoVersion), genesis.ToBlock(nil).Hash(), networkID, nodeURL)
+	s := getStatus(genesis.Config, uint32(conn.negotiatedProtoVersion), genesis.ToBlock().Hash(), networkID, nodeURL)
 	if err = conn.Write(s); err != nil {
 		return nil, err
 	}
@@ -90,7 +90,8 @@ func dial(n *enode.Node) (*Conn, *ecdsa.PrivateKey, error) {
 	var conn Conn
 
 	// dial
-	fd, err := net.Dial("tcp", fmt.Sprintf("%v:%d", n.IP(), n.TCP()))
+	dialer := net.Dialer{Timeout: 10 * time.Second}
+	fd, err := dialer.Dial("tcp", fmt.Sprintf("%v:%d", n.IP(), n.TCP()))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -118,19 +119,16 @@ func writeHello(conn *Conn, priv *ecdsa.PrivateKey) error {
 	h := &Hello{
 		Version: 5,
 		Caps: []p2p.Cap{
-			{Name: "diff", Version: 1},
-			{Name: "eth", Version: 64},
-			{Name: "eth", Version: 65},
 			{Name: "eth", Version: 66},
-			{Name: "les", Version: 2},
-			{Name: "les", Version: 3},
-			{Name: "les", Version: 4},
+			{Name: "eth", Version: 67},
+			{Name: "eth", Version: 68},
 			{Name: "snap", Version: 1},
 		},
 		ID: pub0,
 	}
 
-	conn.ourHighestProtoVersion = 66
+	conn.ourHighestProtoVersion = 68
+	conn.ourHighestSnapProtoVersion = 1
 
 	return conn.Write(h)
 }
@@ -145,17 +143,17 @@ func readHello(conn *Conn, info *clientInfo) error {
 		info.Capabilities = msg.Caps
 		info.SoftwareVersion = msg.Version
 		info.ClientType = msg.Name
+
+		conn.negotiateEthProtocol(info.Capabilities)
+
+		return nil
 	case *Disconnect:
-		return fmt.Errorf("bad hello handshake: %v", msg.Reason.Error())
+		return fmt.Errorf("bad hello handshake disconnect: %v", msg.Reason.Error())
 	case *Error:
-		return fmt.Errorf("bad hello handshake: %v", msg.Error())
+		return fmt.Errorf("bad hello handshake error: %v", msg.Error())
 	default:
-		return fmt.Errorf("bad hello handshake: %v", msg.Code())
+		return fmt.Errorf("bad hello handshake code: %v", msg.Code())
 	}
-
-	conn.negotiateEthProtocol(info.Capabilities)
-
-	return nil
 }
 
 func getStatus(config *params.ChainConfig, version uint32, genesis common.Hash, network uint64, nodeURL string) *Status {
@@ -166,7 +164,7 @@ func getStatus(config *params.ChainConfig, version uint32, genesis common.Hash, 
 			TD:              big.NewInt(0),
 			Head:            genesis,
 			Genesis:         genesis,
-			ForkID:          forkid.NewID(config, genesis, 0),
+			ForkID:          forkid.NewID(config, genesis, 0, 0),
 		}
 	}
 
@@ -184,7 +182,7 @@ func getStatus(config *params.ChainConfig, version uint32, genesis common.Hash, 
 		}
 
 		_status.Head = header.Hash()
-		_status.ForkID = forkid.NewID(config, genesis, header.Number.Uint64())
+		_status.ForkID = forkid.NewID(config, genesis, header.Number.Uint64(), header.Time)
 	}
 
 	return _status
@@ -203,11 +201,11 @@ func readStatus(conn *Conn, info *clientInfo) error {
 			_status.TD = msg.TD
 		}
 	case *Disconnect:
-		return fmt.Errorf("bad status handshake: %v", msg.Reason.Error())
+		return fmt.Errorf("bad status handshake disconnect: %v", msg.Reason.Error())
 	case *Error:
-		return fmt.Errorf("bad status handshake: %v", msg.Error())
+		return fmt.Errorf("bad status handshake error: %v", msg.Error())
 	default:
-		return fmt.Errorf("bad status handshake: %v", msg.Code())
+		return fmt.Errorf("bad status handshake code: %v", msg.Code())
 	}
 	return nil
 }

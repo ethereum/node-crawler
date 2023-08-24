@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
-	"gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 func makeDiscoveryConfig(ctx *cli.Context, db *enode.DB) (*enode.LocalNode, discover.Config) {

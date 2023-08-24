@@ -178,7 +178,6 @@ func (c *crawler) getClientInfoLoop() {
 					"height", info.Blockheight,
 					"td", info.TotalDifficulty,
 					"head", info.HeadHash,
-					"url", n.URLv4(),
 				)
 			}
 
