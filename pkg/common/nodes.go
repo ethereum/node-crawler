@@ -14,13 +14,12 @@
 // You should have received a copy of the GNU General Public License
 // along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
-package main
+package common
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sort"
 	"time"
@@ -31,11 +30,11 @@ import (
 
 const jsonIndent = "    "
 
-// nodeSet is the nodes.json file format. It holds a set of node records
+// NodeSet is the nodes.json file format. It holds a set of node records
 // as a JSON object.
-type nodeSet map[enode.ID]nodeJSON
+type NodeSet map[enode.ID]NodeJSON
 
-type nodeJSON struct {
+type NodeJSON struct {
 	Seq uint64      `json:"seq"`
 	N   *enode.Node `json:"record"`
 
@@ -48,20 +47,20 @@ type nodeJSON struct {
 	// This one tracks the time of our last attempt to contact the node.
 	LastCheck time.Time `json:"lastCheck,omitempty"`
 
-	Info *clientInfo `json:"clientInfo,omitempty"`
+	Info *ClientInfo `json:"clientInfo,omitempty"`
 
 	TooManyPeers bool `json:"tooManyPeers,omitempty"`
 }
 
-func loadNodesJSON(file string) nodeSet {
-	var nodes nodeSet
+func LoadNodesJSON(file string) NodeSet {
+	var nodes NodeSet
 	if err := common.LoadJSON(file, &nodes); err != nil {
 		panic(err)
 	}
 	return nodes
 }
 
-func writeNodesJSON(file string, nodes nodeSet) {
+func (nodes NodeSet) WriteNodesJSON(file string) {
 	nodesJSON, err := json.MarshalIndent(nodes, "", jsonIndent)
 	if err != nil {
 		panic(err)
@@ -70,13 +69,13 @@ func writeNodesJSON(file string, nodes nodeSet) {
 		os.Stdout.Write(nodesJSON)
 		return
 	}
-	if err := ioutil.WriteFile(file, nodesJSON, 0644); err != nil {
+	if err := os.WriteFile(file, nodesJSON, 0644); err != nil {
 		panic(err)
 	}
 }
 
-// nodes returns the node records contained in the set.
-func (ns nodeSet) nodes() []*enode.Node {
+// Nodes returns the node records contained in the set.
+func (ns NodeSet) Nodes() []*enode.Node {
 	result := make([]*enode.Node, 0, len(ns))
 	for _, n := range ns {
 		result = append(result, n.N)
@@ -88,8 +87,8 @@ func (ns nodeSet) nodes() []*enode.Node {
 	return result
 }
 
-// add ensures the given nodes are present in the set.
-func (ns nodeSet) add(nodes ...*enode.Node) {
+// Add ensures the given nodes are present in the set.
+func (ns NodeSet) Add(nodes ...*enode.Node) {
 	for _, n := range nodes {
 		v := ns[n.ID()]
 		v.N = n
@@ -98,28 +97,28 @@ func (ns nodeSet) add(nodes ...*enode.Node) {
 	}
 }
 
-// topN returns the top n nodes by score as a new set.
-func (ns nodeSet) topN(n int) nodeSet {
+// TopN returns the top n nodes by score as a new set.
+func (ns NodeSet) TopN(n int) NodeSet {
 	if n >= len(ns) {
 		return ns
 	}
 
-	byscore := make([]nodeJSON, 0, len(ns))
+	byscore := make([]NodeJSON, 0, len(ns))
 	for _, v := range ns {
 		byscore = append(byscore, v)
 	}
 	sort.Slice(byscore, func(i, j int) bool {
 		return byscore[i].Score >= byscore[j].Score
 	})
-	result := make(nodeSet, n)
+	result := make(NodeSet, n)
 	for _, v := range byscore[:n] {
 		result[v.N.ID()] = v
 	}
 	return result
 }
 
-// verify performs integrity checks on the node set.
-func (ns nodeSet) verify() error {
+// Verify performs integrity checks on the node set.
+func (ns NodeSet) Verify() error {
 	for id, n := range ns {
 		if n.N.ID() != id {
 			return fmt.Errorf("invalid node %v: ID does not match ID %v in record", id, n.N.ID())

@@ -19,7 +19,6 @@ package main
 import (
 	"database/sql"
 	"os"
-	"sync"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -27,11 +26,12 @@ import (
 	"github.com/oschwald/geoip2-golang"
 
 	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
+	gethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/node-crawler/pkg/common"
+	"github.com/ethereum/node-crawler/pkg/crawler"
+	"github.com/ethereum/node-crawler/pkg/database"
 
 	"github.com/urfave/cli/v2"
 )
@@ -43,7 +43,6 @@ var (
 		ArgsUsage: "<nodefile>",
 		Action:    crawlNodes,
 		Flags: []cli.Flag{
-			utils.MainnetFlag,
 			utils.GoerliFlag,
 			utils.SepoliaFlag,
 			utils.NetworkIdFlag,
@@ -56,9 +55,10 @@ var (
 			&nodekeyFlag,
 			&nodedbFlag,
 			&geoipdbFlag,
+			&workersFlag,
 		},
 	}
-	bootnodesFlag = cli.StringFlag{
+	bootnodesFlag = cli.StringSliceFlag{
 		Name:  "bootnodes",
 		Usage: "Comma separated nodes used for bootstrapping",
 	}
@@ -96,16 +96,21 @@ var (
 		Name:  "geoipdb",
 		Usage: "geoip2 database location",
 	}
+	workersFlag = cli.Uint64Flag{
+		Name:  "workers",
+		Usage: "Number of workers to start for updating nodes",
+		Value: 16,
+	}
 )
 
 func crawlNodes(ctx *cli.Context) error {
-	var inputSet nodeSet
+	var inputSet common.NodeSet
 	var geoipDB *geoip2.Reader
 
 	nodesFile := ctx.String(nodeFileFlag.Name)
 
-	if nodesFile != "" && common.FileExist(nodesFile) {
-		inputSet = loadNodesJSON(nodesFile)
+	if nodesFile != "" && gethCommon.FileExist(nodesFile) {
+		inputSet = common.LoadNodesJSON(nodesFile)
 	}
 
 	var db *sql.DB
@@ -122,13 +127,11 @@ func crawlNodes(ctx *cli.Context) error {
 		log.Info("Connected to db")
 		if shouldInit {
 			log.Info("DB did not exist, init")
-			if err := createDB(db); err != nil {
+			if err := database.CreateDB(db); err != nil {
 				panic(err)
 			}
 		}
 	}
-
-	timeout := ctx.Duration(timeoutFlag.Name)
 
 	nodeDB, err := enode.OpenDB(ctx.String(nodedbFlag.Name))
 	if err != nil {
@@ -143,107 +146,23 @@ func crawlNodes(ctx *cli.Context) error {
 		defer func() { _ = geoipDB.Close() }()
 	}
 
+	crawler := crawler.Crawler{
+		NetworkID:  ctx.Uint64(utils.NetworkIdFlag.Name),
+		NodeURL:    ctx.String(nodeURLFlag.Name),
+		ListenAddr: ctx.String(listenAddrFlag.Name),
+		NodeKey:    ctx.String(nodekeyFlag.Name),
+		Bootnodes:  ctx.StringSlice(bootnodesFlag.Name),
+		Timeout:    ctx.Duration(timeoutFlag.Name),
+		Workers:    ctx.Uint64(workersFlag.Name),
+		Sepolia:    ctx.Bool(utils.SepoliaFlag.Name),
+		Goerli:     ctx.Bool(utils.GoerliFlag.Name),
+		NodeDB:     nodeDB,
+	}
+
 	for {
-		inputSet = crawlRound(ctx, inputSet, db, geoipDB, nodeDB, timeout)
+		updatedSet := crawler.CrawlRound(inputSet, db, geoipDB)
 		if nodesFile != "" {
-			writeNodesJSON(nodesFile, inputSet)
+			updatedSet.WriteNodesJSON(nodesFile)
 		}
-	}
-}
-
-func crawlRound(ctx *cli.Context, inputSet nodeSet, db *sql.DB, geoipDB *geoip2.Reader, nodeDB *enode.DB, timeout time.Duration) nodeSet {
-	var v4, v5 nodeSet
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		v5 = discv5(ctx, nodeDB, inputSet, timeout)
-		log.Info("DiscV5", "nodes", len(v5.nodes()))
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		v4 = discv4(ctx, nodeDB, inputSet, timeout)
-		log.Info("DiscV4", "nodes", len(v4.nodes()))
-	}()
-
-	wg.Wait()
-
-	output := make(nodeSet, len(v5)+len(v4))
-	for _, n := range v5 {
-		output[n.N.ID()] = n
-	}
-	for _, n := range v4 {
-		output[n.N.ID()] = n
-	}
-
-	var nodes []nodeJSON
-	for _, node := range output {
-		nodes = append(nodes, node)
-	}
-
-	// Write the node info to influx
-	if db != nil {
-		if err := updateNodes(db, geoipDB, nodes); err != nil {
-			panic(err)
-		}
-	}
-	return output
-}
-
-func discv5(ctx *cli.Context, db *enode.DB, inputSet nodeSet, timeout time.Duration) nodeSet {
-	ln, config := makeDiscoveryConfig(ctx, db)
-
-	socket := listen(ln, ctx.String(listenAddrFlag.Name))
-
-	disc, err := discover.ListenV5(socket, ln, config)
-	if err != nil {
-		panic(err)
-	}
-	defer disc.Close()
-
-	return runCrawler(ctx, disc, inputSet, timeout)
-}
-
-func discv4(ctx *cli.Context, db *enode.DB, inputSet nodeSet, timeout time.Duration) nodeSet {
-	ln, config := makeDiscoveryConfig(ctx, db)
-
-	socket := listen(ln, ctx.String(listenAddrFlag.Name))
-
-	disc, err := discover.ListenV4(socket, ln, config)
-	if err != nil {
-		panic(err)
-	}
-	defer disc.Close()
-
-	return runCrawler(ctx, disc, inputSet, timeout)
-}
-
-func runCrawler(ctx *cli.Context, disc resolver, inputSet nodeSet, timeout time.Duration) nodeSet {
-	genesis := makeGenesis(ctx)
-	if genesis == nil {
-		genesis = core.DefaultGenesisBlock()
-	}
-	networkID := ctx.Uint64(utils.NetworkIdFlag.Name)
-	nodeURL := ctx.String(nodeURLFlag.Name)
-
-	// Crawl the DHT for some time
-	c := newCrawler(genesis, networkID, nodeURL, inputSet, disc, disc.RandomNodes())
-	c.revalidateInterval = 10 * time.Minute
-	return c.run(timeout)
-}
-
-// makeGenesis is the pendant to utils.MakeGenesis
-// with local flags instead of global flags.
-func makeGenesis(ctx *cli.Context) *core.Genesis {
-	switch {
-	case ctx.Bool(utils.SepoliaFlag.Name):
-		return core.DefaultSepoliaGenesisBlock()
-	case ctx.Bool(utils.GoerliFlag.Name):
-		return core.DefaultGoerliGenesisBlock()
-	default:
-		return core.DefaultGenesisBlock()
 	}
 }

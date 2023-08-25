@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package main
+package crawler
 
 import (
 	"crypto/ecdsa"
@@ -26,6 +26,9 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/rlpx"
 	"github.com/ethereum/go-ethereum/rlp"
 )
+
+// This file is mostly copy-pasta'd from
+// github/com/ethereum/go-ethereum/cmd/devp2p/internal/ethtest/types.go
 
 type Message interface {
 	Code() int

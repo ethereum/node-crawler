@@ -14,20 +14,40 @@
 // You should have received a copy of the GNU General Public License
 // along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
 
-package main
+package crawler
 
 import (
+	"database/sql"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
+	"github.com/ethereum/node-crawler/pkg/common"
+	"github.com/ethereum/node-crawler/pkg/database"
+	"github.com/oschwald/geoip2-golang"
 )
 
+type Crawler struct {
+	// These are probably from flags
+	NetworkID  uint64
+	NodeURL    string
+	ListenAddr string
+	NodeKey    string
+	Bootnodes  []string
+	Timeout    time.Duration
+	Workers    uint64
+	Sepolia    bool
+	Goerli     bool
+
+	NodeDB *enode.DB
+}
+
 type crawler struct {
-	output nodeSet
+	output common.NodeSet
 
 	genesis   *core.Genesis
 	networkID uint64
@@ -45,7 +65,7 @@ type crawler struct {
 	revalidateInterval time.Duration
 
 	reqCh   chan *enode.Node
-	workers int
+	workers uint64
 
 	sync.WaitGroup
 	sync.RWMutex
@@ -56,18 +76,26 @@ type resolver interface {
 	RandomNodes() enode.Iterator
 }
 
-func newCrawler(genesis *core.Genesis, networkID uint64, nodeURL string, input nodeSet, disc resolver, iters ...enode.Iterator) *crawler {
+func NewCrawler(
+	genesis *core.Genesis,
+	networkID uint64,
+	nodeURL string,
+	input common.NodeSet,
+	workers uint64,
+	disc resolver,
+	iters ...enode.Iterator,
+) *crawler {
 	c := &crawler{
-		output:    make(nodeSet, len(input)),
+		output:    make(common.NodeSet, len(input)),
 		genesis:   genesis,
 		networkID: networkID,
 		nodeURL:   nodeURL,
 		disc:      disc,
 		iters:     iters,
-		inputIter: enode.IterNodes(input.nodes()),
+		inputIter: enode.IterNodes(input.Nodes()),
 		ch:        make(chan *enode.Node),
 		reqCh:     make(chan *enode.Node, 512), // TODO: define this in config
-		workers:   16,                          // TODO: define this in config
+		workers:   workers,
 		closed:    make(chan struct{}),
 	}
 	c.iters = append(c.iters, c.inputIter)
@@ -79,7 +107,7 @@ func newCrawler(genesis *core.Genesis, networkID uint64, nodeURL string, input n
 	return c
 }
 
-func (c *crawler) run(timeout time.Duration) nodeSet {
+func (c *crawler) Run(timeout time.Duration) common.NodeSet {
 	var (
 		timeoutTimer = time.NewTimer(timeout)
 		timeoutCh    <-chan time.Time
@@ -93,7 +121,7 @@ func (c *crawler) run(timeout time.Duration) nodeSet {
 		go c.runIterator(doneCh, it)
 	}
 
-	for i := 0; i < c.workers; i++ {
+	for i := c.workers; i > 0; i-- {
 		c.Add(1)
 		go c.getClientInfoLoop()
 	}
@@ -237,4 +265,102 @@ func (c *crawler) updateNode(n *enode.Node) {
 		c.reqCh <- n
 		c.output[n.ID()] = node
 	}
+}
+
+func (c Crawler) CrawlRound(
+	inputSet common.NodeSet,
+	db *sql.DB,
+	geoipDB *geoip2.Reader,
+) common.NodeSet {
+	var v4, v5 common.NodeSet
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		v5 = c.discv5(inputSet)
+		log.Info("DiscV5", "nodes", len(v5.Nodes()))
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		v4 = c.discv4(inputSet)
+		log.Info("DiscV4", "nodes", len(v4.Nodes()))
+	}()
+
+	wg.Wait()
+
+	output := make(common.NodeSet, len(v5)+len(v4))
+	for _, n := range v5 {
+		output[n.N.ID()] = n
+	}
+	for _, n := range v4 {
+		output[n.N.ID()] = n
+	}
+
+	var nodes []common.NodeJSON
+	for _, node := range output {
+		nodes = append(nodes, node)
+	}
+
+	// Write the node info to influx
+	if db != nil {
+		if err := database.UpdateNodes(db, geoipDB, nodes); err != nil {
+			panic(err)
+		}
+	}
+	return output
+}
+
+func (c Crawler) discv5(inputSet common.NodeSet) common.NodeSet {
+	ln, config := c.makeDiscoveryConfig()
+
+	socket := listen(ln, c.ListenAddr)
+
+	disc, err := discover.ListenV5(socket, ln, config)
+	if err != nil {
+		panic(err)
+	}
+	defer disc.Close()
+
+	return c.runCrawler(disc, inputSet)
+}
+
+func (c Crawler) discv4(inputSet common.NodeSet) common.NodeSet {
+	ln, config := c.makeDiscoveryConfig()
+
+	socket := listen(ln, c.ListenAddr)
+
+	disc, err := discover.ListenV4(socket, ln, config)
+	if err != nil {
+		panic(err)
+	}
+	defer disc.Close()
+
+	return c.runCrawler(disc, inputSet)
+}
+
+func (c Crawler) runCrawler(disc resolver, inputSet common.NodeSet) common.NodeSet {
+	genesis := c.makeGenesis()
+	if genesis == nil {
+		genesis = core.DefaultGenesisBlock()
+	}
+
+	crawler := NewCrawler(genesis, c.NetworkID, c.NodeURL, inputSet, c.Workers, disc, disc.RandomNodes())
+	crawler.revalidateInterval = 10 * time.Minute
+	return crawler.Run(c.Timeout)
+}
+
+// makeGenesis is the pendant to utils.MakeGenesis
+// with local flags instead of global flags.
+func (c Crawler) makeGenesis() *core.Genesis {
+	if c.Sepolia {
+		return core.DefaultSepoliaGenesisBlock()
+	}
+	if c.Goerli {
+		return core.DefaultGoerliGenesisBlock()
+	}
+
+	return core.DefaultGenesisBlock()
 }

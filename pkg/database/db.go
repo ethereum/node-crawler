@@ -1,4 +1,4 @@
-package main
+package database
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/enr"
+	"github.com/ethereum/node-crawler/pkg/common"
 
 	beacon "github.com/protolambda/zrnt/eth2/beacon/common"
 	"github.com/protolambda/ztyp/codec"
@@ -17,7 +18,12 @@ import (
 	"github.com/oschwald/geoip2-golang"
 )
 
-func updateNodes(db *sql.DB, geoipDB *geoip2.Reader, nodes []nodeJSON) error {
+// ETH2 is a SSZ encoded field.
+type ETH2 []byte
+
+func (v ETH2) ENRKey() string { return "eth2" }
+
+func UpdateNodes(db *sql.DB, geoipDB *geoip2.Reader, nodes []common.NodeJSON) error {
 	log.Info("Writing nodes to db", "nodes", len(nodes))
 
 	now := time.Now()
@@ -26,7 +32,8 @@ func updateNodes(db *sql.DB, geoipDB *geoip2.Reader, nodes []nodeJSON) error {
 		return err
 	}
 	stmt, err := tx.Prepare(
-		`insert into nodes(ID, 
+		`INSERT INTO nodes(
+			ID,
 			Now,
 			ClientType,
 			PK,
@@ -45,15 +52,16 @@ func updateNodes(db *sql.DB, geoipDB *geoip2.Reader, nodes []nodeJSON) error {
 			LastSeen,
 			Seq,
 			Score,
-			ConnType) 
-			values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+			ConnType
+		) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+	)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
 	for _, n := range nodes {
-		info := &clientInfo{}
+		info := &common.ClientInfo{}
 		if n.Info != nil {
 			info = n.Info
 		}
@@ -132,32 +140,32 @@ func updateNodes(db *sql.DB, geoipDB *geoip2.Reader, nodes []nodeJSON) error {
 	return tx.Commit()
 }
 
-func createDB(db *sql.DB) error {
+func CreateDB(db *sql.DB) error {
 	sqlStmt := `
 	CREATE TABLE nodes (
-		ID text not null, 
-		Now text not null,
-		ClientType text,
-		PK text,
-		SoftwareVersion text,
-		Capabilities text,
-		NetworkID number,
-		ForkID text,
-		Blockheight text,
-		TotalDifficulty text,
-		HeadHash text,
-		IP text,
-		Country text,
-		City text,
-		Coordinates text,
-		FirstSeen text,
-		LastSeen text,
-		Seq number,
-		Score number,
-		ConnType text,
+		ID              TEXT NOT NULL,
+		Now             TEXT NOT NULL,
+		ClientType      TEXT,
+		PK              TEXT,
+		SoftwareVersion TEXT,
+		Capabilities    TEXT,
+		NetworkID       NUMBER,
+		ForkID          TEXT,
+		Blockheight     TEXT,
+		TotalDifficulty TEXT,
+		HeadHash        TEXT,
+		IP              TEXT,
+		Country         TEXT,
+		City            TEXT,
+		Coordinates     TEXT,
+		FirstSeen       TEXT,
+		LastSeen        TEXT,
+		Seq             NUMBER,
+		Score           NUMBER,
+		ConnType        TEXT,
 		PRIMARY KEY (ID, Now)
 	);
-	delete from nodes;
+	DELETE FROM nodes;
 	`
 	_, err := db.Exec(sqlStmt)
 	return err

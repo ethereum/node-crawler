@@ -1,37 +1,35 @@
-package main
+package crawler
 
 import (
 	"fmt"
 	"net"
-	"strings"
 
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/urfave/cli/v2"
 )
 
-func makeDiscoveryConfig(ctx *cli.Context, db *enode.DB) (*enode.LocalNode, discover.Config) {
+func (c Crawler) makeDiscoveryConfig() (*enode.LocalNode, discover.Config) {
 	var cfg discover.Config
 	var err error
 
-	if ctx.IsSet(nodekeyFlag.Name) {
-		key, err := crypto.HexToECDSA(ctx.String(nodekeyFlag.Name))
+	if c.NodeKey != "" {
+		key, err := crypto.HexToECDSA(c.NodeKey)
 		if err != nil {
-			panic(fmt.Errorf("-%s: %v", nodekeyFlag.Name, err))
+			panic(fmt.Errorf("-%s: %v", c.NodeKey, err))
 		}
 		cfg.PrivateKey = key
 	} else {
 		cfg.PrivateKey, _ = crypto.GenerateKey()
 	}
 
-	cfg.Bootnodes, err = parseBootnodes(ctx)
+	cfg.Bootnodes, err = c.parseBootnodes()
 	if err != nil {
 		panic(err)
 	}
 
-	return enode.NewLocalNode(db, cfg.PrivateKey), cfg
+	return enode.NewLocalNode(c.NodeDB, cfg.PrivateKey), cfg
 }
 
 func listen(ln *enode.LocalNode, addr string) *net.UDPConn {
@@ -53,18 +51,15 @@ func listen(ln *enode.LocalNode, addr string) *net.UDPConn {
 	return usocket
 }
 
-func parseBootnodes(ctx *cli.Context) ([]*enode.Node, error) {
-	s := params.MainnetBootnodes
-	if ctx.IsSet(bootnodesFlag.Name) {
-		input := ctx.String(bootnodesFlag.Name)
-		if input == "" {
-			return nil, nil
-		}
-		s = strings.Split(input, ",")
+func (c Crawler) parseBootnodes() ([]*enode.Node, error) {
+	bootnodes := params.MainnetBootnodes
+	if len(c.Bootnodes) != 0 {
+		bootnodes = c.Bootnodes
 	}
-	nodes := make([]*enode.Node, len(s))
+
+	nodes := make([]*enode.Node, len(bootnodes))
 	var err error
-	for i, record := range s {
+	for i, record := range bootnodes {
 		nodes[i], err = parseNode(record)
 		if err != nil {
 			return nil, fmt.Errorf("invalid bootstrap node: %v", err)

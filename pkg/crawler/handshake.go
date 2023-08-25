@@ -1,4 +1,4 @@
-package main
+package crawler
 
 import (
 	"context"
@@ -8,7 +8,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
+	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/forkid"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/p2p/rlpx"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/node-crawler/pkg/common"
 
 	"github.com/pkg/errors"
 )
@@ -27,19 +28,8 @@ var (
 	lastStatusUpdate time.Time
 )
 
-type clientInfo struct {
-	ClientType      string
-	SoftwareVersion uint64
-	Capabilities    []p2p.Cap
-	NetworkID       uint64
-	ForkID          forkid.ID
-	Blockheight     string
-	TotalDifficulty *big.Int
-	HeadHash        common.Hash
-}
-
-func getClientInfo(genesis *core.Genesis, networkID uint64, nodeURL string, n *enode.Node) (*clientInfo, error) {
-	var info clientInfo
+func getClientInfo(genesis *core.Genesis, networkID uint64, nodeURL string, n *enode.Node) (*common.ClientInfo, error) {
+	var info common.ClientInfo
 
 	conn, sk, err := dial(n)
 	if err != nil {
@@ -133,7 +123,7 @@ func writeHello(conn *Conn, priv *ecdsa.PrivateKey) error {
 	return conn.Write(h)
 }
 
-func readHello(conn *Conn, info *clientInfo) error {
+func readHello(conn *Conn, info *common.ClientInfo) error {
 	switch msg := conn.Read().(type) {
 	case *Hello:
 		// set snappy if version is at least 5
@@ -156,7 +146,7 @@ func readHello(conn *Conn, info *clientInfo) error {
 	}
 }
 
-func getStatus(config *params.ChainConfig, version uint32, genesis common.Hash, network uint64, nodeURL string) *Status {
+func getStatus(config *params.ChainConfig, version uint32, genesis ethCommon.Hash, network uint64, nodeURL string) *Status {
 	if _status == nil {
 		_status = &Status{
 			ProtocolVersion: version,
@@ -188,7 +178,7 @@ func getStatus(config *params.ChainConfig, version uint32, genesis common.Hash, 
 	return _status
 }
 
-func readStatus(conn *Conn, info *clientInfo) error {
+func readStatus(conn *Conn, info *common.ClientInfo) error {
 	switch msg := conn.Read().(type) {
 	case *Status:
 		info.ForkID = msg.ForkID

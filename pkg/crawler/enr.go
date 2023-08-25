@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package main
+package crawler
 
 import (
 	"bytes"
@@ -28,11 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enr"
 	"github.com/ethereum/go-ethereum/rlp"
 )
-
-// ETH2 is a SSZ encoded field.
-type ETH2 []byte
-
-func (v ETH2) ENRKey() string { return "eth2" }
 
 // parseNode parses a node record and verifies its signature.
 func parseNode(source string) (*enode.Node, error) {
