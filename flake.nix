@@ -20,18 +20,23 @@
             pname = "crawler";
             version = "0.0.0";
 
-            src = ./crawler;
+            src = ./.;
+            subPackages = [ "cmd/crawler" ];
 
-            vendorHash = "sha256-9gqQ8z/KVx+s+moVXUJ/o1PXfHPsskXeK5YsCGsO9Jc=";
+            vendorHash = "sha256-nR6YsXZvIUupDHGCgOYELDpJVbbPc1SPK9LdwnL5sAQ=";
 
             CGO_ENABLED = 0;
 
-            ldflags = [ "-s" "-extldflags -static" ];
+            ldflags = [
+              "-s"
+              "-w"
+              "-extldflags -static"
+            ];
           };
         };
         devShell = pkgs.devshell.mkShell {
           packages = with pkgs; [
-            go_1_21
+            go
             gopls
             golangci-lint
             sqlite
