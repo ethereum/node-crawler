@@ -28,7 +28,7 @@ This is a debug endpoint that has the raw `clientId` details.
 
 ### MVP: Parsed Output
 
-Retreives the list of clients sturctured and strongly typed. Ordered by count.
+Retrieves the list of clients structured and strongly typed. Ordered by count.
 
 <table>
   <tr>
@@ -265,9 +265,9 @@ Get the list of historical entry points given a specific filter. Note filter ver
 
 ## Filter Schema design
 
-Filter allows `AND` and `OR` querying with a operator based baked into each field.
+Filter allows `AND` and `OR` querying with an operator based baked into each field.
 
-For example and `AND`, find me Geth versioned more than 1.2.45. :
+For example, for an `AND` query, find Geth versions greater than 1.2.45:
 
 ```
 [
@@ -276,8 +276,7 @@ For example and `AND`, find me Geth versioned more than 1.2.45. :
   ]
 ]
 ```
-
-Another example an `OR`, filter by geth or netherermind:
+Another example is an `OR` query, filtering by Geth or Nethermind:
 
 ```
 [
