@@ -1,4 +1,4 @@
-/# Compile crawler 
+# Compile crawler 
 FROM golang:1.16-alpine AS go_builder
 RUN apk add gcc musl-dev linux-headers git
 RUN git clone https://github.com/ethereum/node-crawler.git
