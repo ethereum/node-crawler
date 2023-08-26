@@ -1,4 +1,4 @@
-package parser
+package vparser
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ type OSInfo struct {
 }
 
 type LanguageInfo struct {
-	Name string
+	Name    string
 	Version string
 }
 
@@ -108,9 +108,9 @@ func parseVersion(input string) Version {
 	case 6:
 		fallthrough
 	case 5:
-		vers.Date = split[split_length - 1]
-		vers.Build = split[split_length - 2]
-		vers.Tag = strings.Join(split[1:split_length - 3], "")
+		vers.Date = split[split_length-1]
+		vers.Build = split[split_length-2]
+		vers.Tag = strings.Join(split[1:split_length-3], "")
 		vers.Major, vers.Minor, vers.Patch = parseVersionNumber(split[0])
 	case 4:
 		// Date
@@ -133,7 +133,7 @@ func parseVersion(input string) Version {
 		fmt.Println("Version string is invalid:", input)
 		vers.Error = true
 	}
-	
+
 	return vers
 }
 

@@ -1,4 +1,4 @@
-package parser
+package vparser
 
 import (
 	"reflect"
@@ -6,14 +6,14 @@ import (
 )
 
 func TestParseVersionString(t *testing.T) {
-	
+
 	type ParseTestCase struct {
 		name string
 		args string
 		want *ParsedInfo
 	}
 
-	var test_data = []ParseTestCase {
+	var test_data = []ParseTestCase{
 		{
 			name: "single",
 			args: "geth",
@@ -30,15 +30,15 @@ func TestParseVersionString(t *testing.T) {
 					Major: 1,
 					Minor: 10,
 					Patch: 3,
-					Tag: "stable",
+					Tag:   "stable",
 					Build: "991384a7",
 				},
 				Os: OSInfo{
-					Os: "linux",
+					Os:           "linux",
 					Architecture: "amd64",
 				},
 				Language: LanguageInfo{
-					Name: "go",
+					Name:    "go",
 					Version: "1.16.3",
 				},
 			},
@@ -52,14 +52,14 @@ func TestParseVersionString(t *testing.T) {
 					Major: 1,
 					Minor: 10,
 					Patch: 4,
-					Tag: "stable",
+					Tag:   "stable",
 				},
 				Os: OSInfo{
-					Os: "linux",
+					Os:           "linux",
 					Architecture: "x64",
 				},
 				Language: LanguageInfo{
-					Name: "go",
+					Name:    "go",
 					Version: "1.16.4",
 				},
 			},
@@ -73,14 +73,14 @@ func TestParseVersionString(t *testing.T) {
 					Major: 21,
 					Minor: 7,
 					Patch: 0,
-					Tag: "rc1",
+					Tag:   "rc1",
 				},
 				Os: OSInfo{
-					Os: "darwin",
+					Os:           "darwin",
 					Architecture: "x86_64",
 				},
 				Language: LanguageInfo{
-					Name: "java",
+					Name:    "java",
 					Version: "11",
 				},
 			},
@@ -94,15 +94,15 @@ func TestParseVersionString(t *testing.T) {
 					Major: 2021,
 					Minor: 06,
 					Patch: 5,
-					Tag: "alpha",
+					Tag:   "alpha",
 					Build: "a0694dd3",
 				},
 				Os: OSInfo{
-					Os: "windows",
+					Os:           "windows",
 					Architecture: "x86_64",
 				},
 				Language: LanguageInfo{
-					Name: "go",
+					Name:    "go",
 					Version: "1.16.5",
 				},
 			},
@@ -116,9 +116,9 @@ func TestParseVersionString(t *testing.T) {
 					Major: 3,
 					Minor: 2,
 					Patch: 6,
-					Tag: "stable",
+					Tag:   "stable",
 					Build: "f9f4926",
-					Date: "20210514",
+					Date:  "20210514",
 				},
 				// This doesn't work
 				// Os: OSInfo{
@@ -126,7 +126,7 @@ func TestParseVersionString(t *testing.T) {
 				// 	Architecture: "x86_64",
 				// },
 				Language: LanguageInfo{
-					Name: "rustc",
+					Name:    "rustc",
 					Version: "1.52.1",
 				},
 			},
@@ -142,7 +142,7 @@ func TestParseVersionString(t *testing.T) {
 			want: nil,
 		},
 	}
-	
+
 	for _, tt := range test_data {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := ParseVersionString(tt.args); !reflect.DeepEqual(got, tt.want) {

@@ -27,7 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/discover"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/node-crawler/pkg/common"
-	"github.com/ethereum/node-crawler/pkg/database"
+	"github.com/ethereum/node-crawler/pkg/crawlerdb"
 	"github.com/oschwald/geoip2-golang"
 )
 
@@ -306,7 +306,7 @@ func (c Crawler) CrawlRound(
 
 	// Write the node info to influx
 	if db != nil {
-		if err := database.UpdateNodes(db, geoipDB, nodes); err != nil {
+		if err := crawlerdb.UpdateNodes(db, geoipDB, nodes); err != nil {
 			panic(err)
 		}
 	}

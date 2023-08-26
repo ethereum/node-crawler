@@ -31,7 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/node-crawler/pkg/common"
 	"github.com/ethereum/node-crawler/pkg/crawler"
-	"github.com/ethereum/node-crawler/pkg/database"
+	"github.com/ethereum/node-crawler/pkg/crawlerdb"
 
 	"github.com/urfave/cli/v2"
 )
@@ -127,7 +127,7 @@ func crawlNodes(ctx *cli.Context) error {
 		log.Info("Connected to db")
 		if shouldInit {
 			log.Info("DB did not exist, init")
-			if err := database.CreateDB(db); err != nil {
+			if err := crawlerdb.CreateDB(db); err != nil {
 				panic(err)
 			}
 		}

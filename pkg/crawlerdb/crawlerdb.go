@@ -1,4 +1,4 @@
-package input
+package crawlerdb
 
 import (
 	"database/sql"
@@ -12,14 +12,24 @@ type CrawledNode struct {
 	SoftwareVersion uint64
 	Capabilities    string
 	NetworkID       uint64
-	Country		string
+	Country         string
 	ForkID          string
 }
 
 func ReadRecentNodes(db *sql.DB, lastCheck time.Time) ([]CrawledNode, error) {
-	queryStmt := "SELECT ID, Now, ClientType, SoftwareVersion, Capabilities, NetworkID, Country, " +
-		"ForkID FROM nodes WHERE Now > ?"
-	// TODO do a proper check here ^
+	queryStmt := `
+		SELECT
+			ID,
+			Now,
+			ClientType,
+			SoftwareVersion,
+			Capabilities,
+			NetworkID,
+			Country,
+			ForkID
+		FROM nodes
+		WHERE Now > ?
+	`
 	rows, err := db.Query(queryStmt, lastCheck.String())
 
 	if err != nil {
@@ -29,7 +39,16 @@ func ReadRecentNodes(db *sql.DB, lastCheck time.Time) ([]CrawledNode, error) {
 	var nodes []CrawledNode
 	for rows.Next() {
 		var node CrawledNode
-		err = rows.Scan(&node.ID, &node.Now, &node.ClientType, &node.SoftwareVersion, &node.Capabilities, &node.NetworkID, &node.Country, &node.ForkID,)
+		err = rows.Scan(
+			&node.ID,
+			&node.Now,
+			&node.ClientType,
+			&node.SoftwareVersion,
+			&node.Capabilities,
+			&node.NetworkID,
+			&node.Country,
+			&node.ForkID,
+		)
 		if err != nil {
 			return nil, err
 		}

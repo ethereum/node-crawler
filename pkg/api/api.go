@@ -29,8 +29,8 @@ func New(sdb *sql.DB) *Api {
 }
 
 func (a *Api) dropCacheLoop() {
-	ticker := time.NewTicker(2 * time.Minute)
 	// Drop the cache every 2 minutes
+	ticker := time.NewTicker(2 * time.Minute)
 	for range ticker.C {
 		fmt.Println("Dropping Cache")
 		c, err := lru.New(256)
@@ -44,7 +44,7 @@ func (a *Api) dropCacheLoop() {
 func (a *Api) HandleRequests(wg *sync.WaitGroup) {
 	defer wg.Done()
 	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) { rw.Write([]byte("Hello")) })
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("Hello")) })
 	router.HandleFunc("/v1/dashboard", a.handleDashboard).Queries("filter", "{filter}")
 	router.HandleFunc("/v1/dashboard", a.handleDashboard)
 	fmt.Println("Start serving on port 10000")
@@ -125,7 +125,7 @@ type result struct {
 	Languages        []client `json:"languages"`
 	OperatingSystems []client `json:"operatingSystems"`
 	Versions         []client `json:"versions"`
-	Countries	 []client `json:"countries"`
+	Countries        []client `json:"countries"`
 }
 
 func (a *Api) cachedOrQuery(prefix, query string, whereArgs []interface{}) []client {
@@ -155,7 +155,15 @@ func toQuery(query string, whereArgs []interface{}) string {
 	return res
 }
 
-func (a *Api) storeCache(clientQuery, languageQuery, osQuery, countryQuery, versionQuery string, whereArgs []interface{}, r result) {
+func (a *Api) storeCache(
+	clientQuery,
+	languageQuery,
+	osQuery,
+	countryQuery,
+	versionQuery string,
+	whereArgs []interface{},
+	r result,
+) {
 	a.cache.Add("c"+toQuery(clientQuery, whereArgs), r.Clients)
 	a.cache.Add("l"+toQuery(languageQuery, whereArgs), r.Languages)
 	a.cache.Add("o"+toQuery(osQuery, whereArgs), r.OperatingSystems)
@@ -183,27 +191,92 @@ func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 
 	var topLanguageQuery string
 	if nameCountInQuery == 1 {
-		topLanguageQuery = fmt.Sprintf("SELECT Name, Count(*) as Count FROM (SELECT language_name || language_version as Name FROM nodes %v) GROUP BY Name ORDER BY Count DESC", where)
+		topLanguageQuery = fmt.Sprintf(`
+			SELECT
+				Name,
+				Count(*) as Count
+			FROM (
+				SELECT
+					language_name || language_version as Name
+				FROM nodes %v
+			)
+			GROUP BY Name
+			ORDER BY Count DESC
+		`, where)
 	} else {
-		topLanguageQuery = fmt.Sprintf("SELECT language_name as Name, COUNT(language_name) as Count FROM nodes %v GROUP BY language_name ORDER BY Count DESC", where)
+		topLanguageQuery = fmt.Sprintf(`
+			SELECT
+				language_name as Name,
+				COUNT(language_name) as Count
+			FROM nodes %v
+			GROUP BY language_name
+			ORDER BY Count DESC
+		`, where)
 	}
 
-	topClientsQuery := fmt.Sprintf("SELECT name as Name, COUNT(name) as Count FROM nodes %v GROUP BY name ORDER BY count DESC", where)
-	topOsQuery := fmt.Sprintf("SELECT os_name as Name, COUNT(os_name) as Count FROM nodes %v GROUP BY os_name ORDER BY count DESC", where)
-	topVersionQuery := fmt.Sprintf("SELECT Name, Count(*) as Count FROM (SELECT version_major || '.' || version_minor || '.' || version_patch as Name FROM nodes %v) GROUP BY Name ORDER BY Count DESC ", where)
-	topCountriesQuery := fmt.Sprintf("SELECT country_name as Name, COUNT(country_name) as Count FROM nodes %v GROUP BY country_name ORDER BY count DESC", where)
+	topClientsQuery := fmt.Sprintf(`
+		SELECT
+			name as Name,
+			COUNT(name) as Count
+		FROM nodes %v
+		GROUP BY name
+		ORDER BY count DESC
+	`, where)
+	topOsQuery := fmt.Sprintf(`
+		SELECT
+			os_name as Name,
+			COUNT(os_name) as Count
+		FROM nodes %v
+		GROUP BY os_name
+		ORDER BY count DESC
+	`, where)
+	topVersionQuery := fmt.Sprintf(`
+		SELECT
+			Name,
+			Count(*) as Count
+		FROM (
+			SELECT
+				version_major || '.' || version_minor || '.' || version_patch as Name
+			FROM nodes %v
+		)
+		GROUP BY Name
+		ORDER BY Count DESC
+	`, where)
+	topCountriesQuery := fmt.Sprintf(`
+		SELECT
+			country_name as Name,
+			COUNT(country_name) as Count
+		FROM nodes %v
+		GROUP BY country_name
+		ORDER BY count DESC
+	`, where)
 
 	clients := a.cachedOrQuery("c", topClientsQuery, whereArgs)
 	language := a.cachedOrQuery("l", topLanguageQuery, whereArgs)
 	operatingSystems := a.cachedOrQuery("o", topOsQuery, whereArgs)
 	countries := a.cachedOrQuery("co", topCountriesQuery, whereArgs)
+
 	var versions []client
 	if nameCountInQuery == 1 {
 		versions = a.cachedOrQuery("v", topVersionQuery, whereArgs)
 	}
 
-	res := result{Clients: clients, Languages: language, OperatingSystems: operatingSystems, Versions: versions, Countries: countries}
-	a.storeCache(topClientsQuery, topLanguageQuery, topOsQuery, topCountriesQuery, topVersionQuery, whereArgs, res)
+	res := result{
+		Clients:          clients,
+		Languages:        language,
+		OperatingSystems: operatingSystems,
+		Versions:         versions,
+		Countries:        countries,
+	}
+	a.storeCache(
+		topClientsQuery,
+		topLanguageQuery,
+		topOsQuery,
+		topCountriesQuery,
+		topVersionQuery,
+		whereArgs,
+		res,
+	)
 	json.NewEncoder(rw).Encode(res)
 }
 
@@ -238,7 +311,7 @@ func validateKey(key string) bool {
 		"os_architecture":  {},
 		"language_name":    {},
 		"language_version": {},
-		"country": {},
+		"country":          {},
 	}
 	_, ok := validKeys[key]
 	return ok

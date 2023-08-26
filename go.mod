@@ -5,6 +5,8 @@ go 1.21.0
 require (
 	github.com/ethereum/go-ethereum v1.12.2
 	github.com/fjl/memsize v0.0.1
+	github.com/gorilla/mux v1.8.0
+	github.com/hashicorp/golang-lru v1.0.2
 	github.com/mattn/go-colorable v0.1.13
 	github.com/mattn/go-isatty v0.0.19
 	github.com/oschwald/geoip2-golang v1.9.0
