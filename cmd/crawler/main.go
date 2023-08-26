@@ -17,6 +17,7 @@
 package main
 
 import (
+	// "fmt"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -40,12 +41,13 @@ func init() {
 		return Setup(ctx)
 	}
 	// Set up the CLI app.
-	app.CommandNotFound = func(ctx *cli.Context, cmd string) {
-		fmt.Fprintf(os.Stderr, "No such command: %s\n", cmd)
-		os.Exit(1)
-	}
+	// app.CommandNotFound = func(ctx *cli.Context, cmd string) {
+	// 	fmt.Fprintf(os.Stderr, "No such command: %s\n", cmd)
+	// 	os.Exit(1)
+	// }
 	// Add subcommands.
 	app.Commands = []*cli.Command{
+		apiCommand,
 		crawlerCommand,
 	}
 }
@@ -53,6 +55,7 @@ func init() {
 func main() {
 	err := app.Run(os.Args)
 	if err != nil {
-		panic(err)
+		fmt.Println(err)
+		os.Exit(-127)
 	}
 }
