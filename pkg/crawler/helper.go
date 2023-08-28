@@ -33,9 +33,6 @@ func (c Crawler) makeDiscoveryConfig() (*enode.LocalNode, discover.Config) {
 }
 
 func listen(ln *enode.LocalNode, addr string) *net.UDPConn {
-	if addr == "" {
-		addr = "0.0.0.0:0"
-	}
 	socket, err := net.ListenPacket("udp4", addr)
 	if err != nil {
 		panic(err)

@@ -38,10 +38,9 @@ import (
 
 var (
 	crawlerCommand = &cli.Command{
-		Name:      "crawl",
-		Usage:     "Crawl the ethereum network",
-		ArgsUsage: "<nodefile>",
-		Action:    crawlNodes,
+		Name:   "crawl",
+		Usage:  "Crawl the ethereum network",
+		Action: crawlNodes,
 		Flags: []cli.Flag{
 			utils.GoerliFlag,
 			utils.SepoliaFlag,
@@ -50,7 +49,7 @@ var (
 			&nodeURLFlag,
 			&nodeFileFlag,
 			&timeoutFlag,
-			&tableNameFlag,
+			&crawlerDBFlag,
 			&listenAddrFlag,
 			&nodekeyFlag,
 			&nodedbFlag,
@@ -59,8 +58,9 @@ var (
 		},
 	}
 	bootnodesFlag = cli.StringSliceFlag{
-		Name:  "bootnodes",
-		Usage: "Comma separated nodes used for bootstrapping",
+		Name: "bootnodes",
+		Usage: ("Comma separated nodes used for bootstrapping. " +
+			"Defaults to hard-coded values for the selected network"),
 	}
 	nodeURLFlag = cli.StringFlag{
 		Name:  "nodeURL",
@@ -76,13 +76,10 @@ var (
 		Usage: "Timeout for the crawling in a round",
 		Value: 5 * time.Minute,
 	}
-	tableNameFlag = cli.StringFlag{
-		Name:  "table",
-		Usage: "Name of the sqlite table",
-	}
 	listenAddrFlag = cli.StringFlag{
 		Name:  "addr",
 		Usage: "Listening address",
+		Value: "0.0.0.0:0",
 	}
 	nodekeyFlag = cli.StringFlag{
 		Name:  "nodekey",
@@ -90,7 +87,7 @@ var (
 	}
 	nodedbFlag = cli.StringFlag{
 		Name:  "nodedb",
-		Usage: "Nodes database location",
+		Usage: "Nodes database location. Defaults to in memory database",
 	}
 	geoipdbFlag = cli.StringFlag{
 		Name:  "geoipdb",
@@ -114,8 +111,8 @@ func crawlNodes(ctx *cli.Context) error {
 	}
 
 	var db *sql.DB
-	if ctx.IsSet(tableNameFlag.Name) {
-		name := ctx.String(tableNameFlag.Name)
+	if ctx.IsSet(crawlerDBFlag.Name) {
+		name := ctx.String(crawlerDBFlag.Name)
 		shouldInit := false
 		if _, err := os.Stat(name); os.IsNotExist(err) {
 			shouldInit = true

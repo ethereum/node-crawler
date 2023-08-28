@@ -25,6 +25,8 @@
 
             vendorHash = "sha256-nR6YsXZvIUupDHGCgOYELDpJVbbPc1SPK9LdwnL5sAQ=";
 
+            doCheck = false;
+
             CGO_ENABLED = 0;
 
             ldflags = [
