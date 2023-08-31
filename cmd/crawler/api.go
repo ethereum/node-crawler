@@ -17,10 +17,9 @@ import (
 
 var (
 	apiCommand = &cli.Command{
-		Name:      "api",
-		Usage:     "API server for the crawler",
-		ArgsUsage: "<crawler-db> <api-db>",
-		Action:    startAPI,
+		Name:   "api",
+		Usage:  "API server for the crawler",
+		Action: startAPI,
 		Flags: []cli.Flag{
 			&crawlerDBFlag,
 			&apiDBFlag,
