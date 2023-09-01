@@ -146,3 +146,125 @@ You can read the `./docker-compose.yml` file for more details.
 ```
 docker-compose up
 ```
+
+## Developing with Nix
+
+[Nix](https://nixos.org/) is a package manager and system configuration tool
+and language for reproducible, declarative, and reliable systems.
+
+The Nix [Flake](https://nixos.wiki/wiki/Flakes) in this repo contains all the
+dependencies needed to build the frontend and crawler.
+
+The `flake.lock` file locks the commit which the package manager uses to build
+the packages. Essentially locking the dependencies in time, not in version.
+
+To update the lock file, use `nix flake update --commit-lock-file` this will
+update the git commits in the lock file, and commit the new lock file with a
+nice, standard commit message which shows the change in commit hashes for each
+input.
+
+To activate the development environment with all the packages available, you
+can use the command `nix develop`. To automate this process, you can use
+[direnv](https://direnv.net/) with `use flake` in your `.envrc`. You can learn
+more about Nix and direnv [here](https://github.com/direnv/direnv/wiki/Nix).
+
+## Deploying with NixOS
+
+[Nix](https://nixos.org/) is a package manager and system configuration tool
+and language for reproducible, declarative, and reliable systems.
+
+The Nix [Flake](https://nixos.wiki/wiki/Flakes) in this repo also contains a
+NixOS module for configuring and deploying the node-crawler, API, and Nginx.
+
+There is just a little bit of extra configuration which is needed to bring
+everything together.
+
+An example production configuration:
+
+Your NixOS `flake.nix`:
+
+```nix
+{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    node-crawler.url = "github:ethereum/node-crawler";
+  };
+  outputs = {
+    nixpkgs,
+    node-crawler,
+  }:
+  {
+    nixosConfigurations = {
+      crawlerHostName = nixpkgs.lib.nixosSystem {
+        specialArgs = {
+          inherit node-crawler
+        };
+        modules = [
+          ./configuration.nix
+
+          node-crawler.nixosModules.nodeCrawler
+        ];
+      };
+    };
+  };
+}
+```
+
+Your example `configuration.nix`:
+
+```nix
+{ node-crawler, ... }:
+
+{
+  # Add the overlay from the node-crawler flake
+  # to get the added packages.
+  nixpkgs.overlays = [
+    node-crawler.overlays.default
+  ];
+
+  # It's a good idea to have your firewall
+  # enabled. Make sure you have SSH allowed
+  # so you don't lock yourself out. The openssh
+  # service should do this by default.
+  networking = {
+    firewall = {
+      enable = true;
+      allowedTCPPorts = [
+        80
+        443
+      ];
+    };
+  };
+
+  services = {
+    nodeCrawler = {
+      enable = true;
+      hostName = "server hostname";
+      nginx = {
+        forceSSL = true;
+        enableACME = true;
+      };
+    };
+
+    # Needed for the node crawler to get the country
+    # of the crawled IP address.
+    geoipupdate = {
+      enable = true;
+      settings = {
+        EditionIDs = [
+          "GeoLite2-Country"
+        ];
+        AccountID = account_id;
+        LicenseKey = "location of licence key on server";
+      };
+    };
+  };
+
+  # Needed to enable ACME for automatic SSL certificate
+  # creation for Nginx.
+  security.acme = {
+    acceptTerms = true;
+    defaults.email = "admin+acme@example.com";
+  };
+}
+```
