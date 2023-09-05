@@ -16,7 +16,7 @@
     "react-dom": "^17.0.2",
     "react-icons": "^4.2.0",
     "react-router-dom": "^5.2.0",
-    "react-scripts": "4.0.3",
+    "react-scripts": "^5.0.1",
     "recharts": "2.0.10",
     "string.prototype.matchall": "^4.0.5"
   },

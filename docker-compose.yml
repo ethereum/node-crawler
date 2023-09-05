@@ -1,0 +1,33 @@
+services:
+  crawler:
+    build: ./
+    volumes:
+     - ./data:/data
+    command:
+      - crawl
+      - --timeout
+      - 10m
+      - --crawler-db
+      - /data/crawler.db
+      # Make sure you have the GeoLite DB in the ./data directory.
+      # Comment out the following two lines to disable the GeoLite DB.
+      - --geoipdb
+      - /data/GeoLite2-Country.mmdb
+
+  api:
+    build: ./
+    volumes:
+     - ./data:/data
+    depends_on:
+     - crawler
+    command: "api --crawler-db /data/crawler.db --api-db /data/api.db"
+
+  frontend:
+    build: ./frontend
+    volumes:
+     - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf
+     - ./data:/data
+    depends_on:
+     - api
+    ports:
+     - 80:80
