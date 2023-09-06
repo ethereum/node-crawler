@@ -77,25 +77,57 @@ func startAPI(ctx *cli.Context) error {
 	return nil
 }
 
+func transferNewNodes(crawlerDB, nodeDB *sql.DB) error {
+	crawlerDBTx, err := crawlerDB.Begin()
+	if err != nil {
+		// Sometimes error occur trying to read the crawler database, but
+		// they are normally recoverable, and a lot of the time, it's
+		// because the database is locked by the crawler.
+		return fmt.Errorf("error starting transaction to read nodes: %w", err)
+
+	}
+	defer crawlerDBTx.Rollback()
+
+	nodes, err := crawlerdb.ReadAndDeleteUnseenNodes(crawlerDBTx)
+	if err != nil {
+		// Simiar to nodeDB.Begin() error
+		return fmt.Errorf("error reading nodes: %w", err)
+	}
+
+	if len(nodes) > 0 {
+		err := apidb.InsertCrawledNodes(nodeDB, nodes)
+		if err != nil {
+			// This shouldn't happen because the database is not shared in this
+			// instance, so there shouldn't be lock errors, but anything can
+			// happen. We will still try again.
+			return fmt.Errorf("error inserting nodes: %w", err)
+		}
+		fmt.Printf("%d nodes inserted\n", len(nodes))
+	}
+
+	crawlerDBTx.Commit()
+	return nil
+}
+
 // newNodeDeamon reads new nodes from the crawler and puts them in the db
 // Might trigger the invalidation of caches for the api in the future
 func newNodeDeamon(wg *sync.WaitGroup, crawlerDB, nodeDB *sql.DB) {
 	defer wg.Done()
-	lastCheck := time.Time{}
+
+	// This is so that we can make some kind of exponential backoff for the
+	// retries.
+	retryTimeout := time.Minute
+
 	for {
-		nodes, err := crawlerdb.ReadRecentNodes(crawlerDB, lastCheck)
+		err := transferNewNodes(crawlerDB, nodeDB)
 		if err != nil {
-			fmt.Printf("Error reading nodes: %v\n", err)
-			return
+			fmt.Printf("error transferring new nodes: %s\n", err)
+			time.Sleep(retryTimeout)
+			retryTimeout *= 2
+			continue
 		}
-		lastCheck = time.Now()
-		if len(nodes) > 0 {
-			err := apidb.InsertCrawledNodes(nodeDB, nodes)
-			if err != nil {
-				fmt.Printf("Error inserting nodes: %v\n", err)
-			}
-			fmt.Printf("%d nodes inserted\n", len(nodes))
-		}
+
+		retryTimeout = time.Minute
 		time.Sleep(time.Second)
 	}
 }

@@ -2,7 +2,6 @@ package crawlerdb
 
 import (
 	"database/sql"
-	"time"
 )
 
 type CrawledNode struct {
@@ -16,9 +15,10 @@ type CrawledNode struct {
 	ForkID          string
 }
 
-func ReadRecentNodes(db *sql.DB, lastCheck time.Time) ([]CrawledNode, error) {
+func ReadAndDeleteUnseenNodes(db *sql.Tx) ([]CrawledNode, error) {
 	queryStmt := `
-		SELECT
+		DELETE FROM nodes
+		RETURNING
 			ID,
 			Now,
 			ClientType,
@@ -27,10 +27,8 @@ func ReadRecentNodes(db *sql.DB, lastCheck time.Time) ([]CrawledNode, error) {
 			NetworkID,
 			Country,
 			ForkID
-		FROM nodes
-		WHERE Now > ?
 	`
-	rows, err := db.Query(queryStmt, lastCheck.String())
+	rows, err := db.Query(queryStmt)
 
 	if err != nil {
 		return nil, err

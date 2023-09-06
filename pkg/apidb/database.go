@@ -3,6 +3,8 @@ package apidb
 import (
 	"database/sql"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/ethereum/node-crawler/pkg/crawlerdb"
@@ -83,6 +85,13 @@ func InsertCrawledNodes(db *sql.DB, crawledNodes []crawlerdb.CrawledNode) error 
 	if err != nil {
 		return err
 	}
+
+	// It's possible for us to have the same node scraped multiple times, so
+	// we want to make sure when we are upserting, we get the most recent
+	// scrape upserted last.
+	sort.SliceStable(crawledNodes, func(i, j int) bool {
+		return strings.Compare(crawledNodes[i].Now, crawledNodes[j].Now) < 0
+	})
 
 	for _, node := range crawledNodes {
 		parsed := vparser.ParseVersionString(node.ClientType)
