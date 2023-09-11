@@ -28,21 +28,6 @@ var (
 			&dropNodesTimeFlag,
 		},
 	}
-	crawlerDBFlag = cli.StringFlag{
-		Name:     "crawler-db",
-		Usage:    "Crawler SQLite file name",
-		Required: true,
-	}
-	apiDBFlag = cli.StringFlag{
-		Name:     "api-db",
-		Usage:    "API SQLite file name",
-		Required: true,
-	}
-	dropNodesTimeFlag = cli.DurationFlag{
-		Name:  "drop-time",
-		Usage: "Time to drop crawled nodes without any updates",
-		Value: 24 * time.Hour,
-	}
 )
 
 func startAPI(ctx *cli.Context) error {
