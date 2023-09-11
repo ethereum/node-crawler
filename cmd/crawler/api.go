@@ -22,6 +22,7 @@ var (
 		Action: startAPI,
 		Flags: []cli.Flag{
 			&apiDBFlag,
+			&apiListenAddrFlag,
 			&autovacuumFlag,
 			&busyTimeoutFlag,
 			&crawlerDBFlag,
@@ -70,7 +71,8 @@ func startAPI(ctx *cli.Context) error {
 	go dropDeamon(&wg, nodeDB, ctx.Duration(dropNodesTimeFlag.Name))
 
 	// Start the API deamon
-	apiDeamon := api.New(nodeDB)
+	apiAddress := ctx.String(apiListenAddrFlag.Name)
+	apiDeamon := api.New(apiAddress, nodeDB)
 	go apiDeamon.HandleRequests(&wg)
 	wg.Wait()
 

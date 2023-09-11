@@ -14,17 +14,24 @@ import (
 )
 
 type Api struct {
-	db    *sql.DB
-	cache *lru.Cache
+	address string
+	cache   *lru.Cache
+	db      *sql.DB
 }
 
-func New(sdb *sql.DB) *Api {
+func New(address string, sdb *sql.DB) *Api {
 	cache, err := lru.New(256)
 	if err != nil {
 		return nil
 	}
-	api := &Api{db: sdb, cache: cache}
+
+	api := &Api{
+		address: address,
+		cache:   cache,
+		db:      sdb,
+	}
 	go api.dropCacheLoop()
+
 	return api
 }
 
@@ -47,8 +54,8 @@ func (a *Api) HandleRequests(wg *sync.WaitGroup) {
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("Hello")) })
 	router.HandleFunc("/v1/dashboard", a.handleDashboard).Queries("filter", "{filter}")
 	router.HandleFunc("/v1/dashboard", a.handleDashboard)
-	fmt.Println("Start serving on port 10000")
-	http.ListenAndServe(":10000", router)
+	fmt.Println("Starting API on:", a.address)
+	http.ListenAndServe(a.address, router)
 }
 
 type client struct {
