@@ -21,8 +21,10 @@ var (
 		Usage:  "API server for the crawler",
 		Action: startAPI,
 		Flags: []cli.Flag{
-			&crawlerDBFlag,
 			&apiDBFlag,
+			&autovacuumFlag,
+			&busyTimeoutFlag,
+			&crawlerDBFlag,
 			&dropNodesTimeFlag,
 		},
 	}
@@ -44,7 +46,14 @@ var (
 )
 
 func startAPI(ctx *cli.Context) error {
-	crawlerDB, err := sql.Open("sqlite", ctx.String(crawlerDBFlag.Name))
+	autovacuum := ctx.String(autovacuumFlag.Name)
+	busyTimeout := ctx.Uint64(busyTimeoutFlag.Name)
+
+	crawlerDB, err := openSQLiteDB(
+		ctx.String(crawlerDBFlag.Name),
+		autovacuum,
+		busyTimeout,
+	)
 	if err != nil {
 		return err
 	}
@@ -54,7 +63,11 @@ func startAPI(ctx *cli.Context) error {
 	if _, err := os.Stat(apiDBPath); os.IsNotExist(err) {
 		shouldInit = true
 	}
-	nodeDB, err := sql.Open("sqlite", apiDBPath)
+	nodeDB, err := openSQLiteDB(
+		apiDBPath,
+		autovacuum,
+		busyTimeout,
+	)
 	if err != nil {
 		return err
 	}

@@ -42,19 +42,21 @@ var (
 		Usage:  "Crawl the ethereum network",
 		Action: crawlNodes,
 		Flags: []cli.Flag{
-			utils.GoerliFlag,
-			utils.SepoliaFlag,
-			utils.NetworkIdFlag,
+			&autovacuumFlag,
 			&bootnodesFlag,
-			&nodeURLFlag,
-			&nodeFileFlag,
-			&timeoutFlag,
+			&busyTimeoutFlag,
 			&crawlerDBFlag,
-			&listenAddrFlag,
-			&nodekeyFlag,
-			&nodedbFlag,
 			&geoipdbFlag,
+			&listenAddrFlag,
+			&nodeFileFlag,
+			&nodeURLFlag,
+			&nodedbFlag,
+			&nodekeyFlag,
+			&timeoutFlag,
 			&workersFlag,
+			utils.GoerliFlag,
+			utils.NetworkIdFlag,
+			utils.SepoliaFlag,
 		},
 	}
 	bootnodesFlag = cli.StringSliceFlag{
@@ -118,7 +120,13 @@ func crawlNodes(ctx *cli.Context) error {
 			shouldInit = true
 		}
 		var err error
-		if db, err = sql.Open("sqlite", name); err != nil {
+
+		db, err = openSQLiteDB(
+			name,
+			ctx.String(autovacuumFlag.Name),
+			ctx.Uint64(busyTimeoutFlag.Name),
+		)
+		if err != nil {
 			panic(err)
 		}
 		log.Info("Connected to db")
