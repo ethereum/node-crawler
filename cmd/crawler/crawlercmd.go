@@ -19,7 +19,6 @@ package main
 import (
 	"database/sql"
 	"os"
-	"time"
 
 	_ "modernc.org/sqlite"
 
@@ -42,61 +41,22 @@ var (
 		Usage:  "Crawl the ethereum network",
 		Action: crawlNodes,
 		Flags: []cli.Flag{
-			utils.GoerliFlag,
-			utils.SepoliaFlag,
-			utils.NetworkIdFlag,
+			&autovacuumFlag,
 			&bootnodesFlag,
-			&nodeURLFlag,
-			&nodeFileFlag,
-			&timeoutFlag,
+			&busyTimeoutFlag,
 			&crawlerDBFlag,
-			&listenAddrFlag,
-			&nodekeyFlag,
-			&nodedbFlag,
 			&geoipdbFlag,
+			&listenAddrFlag,
+			&nodeFileFlag,
+			&nodeURLFlag,
+			&nodedbFlag,
+			&nodekeyFlag,
+			&timeoutFlag,
 			&workersFlag,
+			utils.GoerliFlag,
+			utils.NetworkIdFlag,
+			utils.SepoliaFlag,
 		},
-	}
-	bootnodesFlag = cli.StringSliceFlag{
-		Name: "bootnodes",
-		Usage: ("Comma separated nodes used for bootstrapping. " +
-			"Defaults to hard-coded values for the selected network"),
-	}
-	nodeURLFlag = cli.StringFlag{
-		Name:  "nodeURL",
-		Usage: "URL of the node you want to connect to",
-		// Value: "http://localhost:8545",
-	}
-	nodeFileFlag = cli.StringFlag{
-		Name:  "nodefile",
-		Usage: "Path to a node file containing nodes to be crawled",
-	}
-	timeoutFlag = cli.DurationFlag{
-		Name:  "timeout",
-		Usage: "Timeout for the crawling in a round",
-		Value: 5 * time.Minute,
-	}
-	listenAddrFlag = cli.StringFlag{
-		Name:  "addr",
-		Usage: "Listening address",
-		Value: "0.0.0.0:0",
-	}
-	nodekeyFlag = cli.StringFlag{
-		Name:  "nodekey",
-		Usage: "Hex-encoded node key",
-	}
-	nodedbFlag = cli.StringFlag{
-		Name:  "nodedb",
-		Usage: "Nodes database location. Defaults to in memory database",
-	}
-	geoipdbFlag = cli.StringFlag{
-		Name:  "geoipdb",
-		Usage: "geoip2 database location",
-	}
-	workersFlag = cli.Uint64Flag{
-		Name:  "workers",
-		Usage: "Number of workers to start for updating nodes",
-		Value: 16,
 	}
 )
 
@@ -118,7 +78,13 @@ func crawlNodes(ctx *cli.Context) error {
 			shouldInit = true
 		}
 		var err error
-		if db, err = sql.Open("sqlite", name); err != nil {
+
+		db, err = openSQLiteDB(
+			name,
+			ctx.String(autovacuumFlag.Name),
+			ctx.Uint64(busyTimeoutFlag.Name),
+		)
+		if err != nil {
 			panic(err)
 		}
 		log.Info("Connected to db")
