@@ -21,3 +21,6 @@ nodes
 node-crawler-backend.exe
 node-crawler-backend
 /data/
+
+# nix
+result
