@@ -4,12 +4,12 @@ name: node-crawler workflow
 on:
   push:
     branches:
-      - master
+      - main
     tags:
       - '**'
   pull_request:
     branches:
-      - master
+      - main
   workflow_dispatch:
 
 jobs:
@@ -26,7 +26,7 @@ jobs:
     - name: Lint
       run: ./bin/golangci-lint run --config .golangci.yml
     - name: Vet
-      run: go vet
+      run: go vet ./...
 
   test:
     runs-on: ubuntu-latest

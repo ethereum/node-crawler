@@ -6,7 +6,6 @@ import (
 )
 
 func TestParseVersionString(t *testing.T) {
-
 	type ParseTestCase struct {
 		name string
 		args string

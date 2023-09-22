@@ -175,52 +175,49 @@ func (c *crawler) runIterator(done chan<- enode.Iterator, it enode.Iterator) {
 
 func (c *crawler) getClientInfoLoop() {
 	defer func() { c.Done() }()
-	for {
-		select {
-		case n, ok := <-c.reqCh:
-			if !ok {
-				return
-			}
-
-			var tooManyPeers bool
-			var scoreInc int
-
-			info, err := getClientInfo(c.genesis, c.networkID, c.nodeURL, n)
-			if err != nil {
-				log.Warn("GetClientInfo failed", "error", err, "nodeID", n.ID())
-				if strings.Contains(err.Error(), "too many peers") {
-					tooManyPeers = true
-				}
-			} else {
-				scoreInc = 10
-			}
-
-			if info != nil {
-				log.Info(
-					"Updating node info",
-					"client_type", info.ClientType,
-					"version", info.SoftwareVersion,
-					"network_id", info.NetworkID,
-					"caps", info.Capabilities,
-					"fork_id", info.ForkID,
-					"height", info.Blockheight,
-					"td", info.TotalDifficulty,
-					"head", info.HeadHash,
-				)
-			}
-
-			c.Lock()
-			node := c.output[n.ID()]
-			node.N = n
-			node.Seq = n.Seq()
-			if info != nil {
-				node.Info = info
-			}
-			node.TooManyPeers = tooManyPeers
-			node.Score += scoreInc
-			c.output[n.ID()] = node
-			c.Unlock()
+	for n := range c.reqCh {
+		if n == nil {
+			return
 		}
+
+		var tooManyPeers bool
+		var scoreInc int
+
+		info, err := getClientInfo(c.genesis, c.networkID, c.nodeURL, n)
+		if err != nil {
+			log.Warn("GetClientInfo failed", "error", err, "nodeID", n.ID())
+			if strings.Contains(err.Error(), "too many peers") {
+				tooManyPeers = true
+			}
+		} else {
+			scoreInc = 10
+		}
+
+		if info != nil {
+			log.Info(
+				"Updating node info",
+				"client_type", info.ClientType,
+				"version", info.SoftwareVersion,
+				"network_id", info.NetworkID,
+				"caps", info.Capabilities,
+				"fork_id", info.ForkID,
+				"height", info.Blockheight,
+				"td", info.TotalDifficulty,
+				"head", info.HeadHash,
+			)
+		}
+
+		c.Lock()
+		node := c.output[n.ID()]
+		node.N = n
+		node.Seq = n.Seq()
+		if info != nil {
+			node.Info = info
+		}
+		node.TooManyPeers = tooManyPeers
+		node.Score += scoreInc
+		c.output[n.ID()] = node
+		c.Unlock()
 	}
 }
 
