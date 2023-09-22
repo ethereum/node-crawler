@@ -87,7 +87,6 @@ func transferNewNodes(crawlerDB, nodeDB *sql.DB) error {
 		// they are normally recoverable, and a lot of the time, it's
 		// because the database is locked by the crawler.
 		return fmt.Errorf("error starting transaction to read nodes: %w", err)
-
 	}
 	defer crawlerDBTx.Rollback()
 
