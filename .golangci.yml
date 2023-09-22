@@ -18,15 +18,14 @@ linters:
     - misspell
     - unconvert
     - typecheck
-    - unused
+# this repo contains a few copied files from go-ethereum, 
+# and some of them have unused fields/functions
+    #- unused
     - staticcheck
     - bidichk
     - durationcheck
     - exportloopref
     - whitespace
-# this repo contains a few copied files from go-ethereum, 
-# and some of them have unused fields/functions
-    - unused 
 
     # - structcheck # lots of false positives
     # - errcheck #lot of false positives
