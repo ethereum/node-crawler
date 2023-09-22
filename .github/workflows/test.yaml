@@ -26,7 +26,7 @@ jobs:
     - name: Lint
       run: ./bin/golangci-lint run --config .golangci.yml
     - name: Vet
-      run: go vet
+      run: go vet ./...
 
   test:
     runs-on: ubuntu-latest
