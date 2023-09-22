@@ -2,11 +2,11 @@ package apidb
 
 import (
 	"database/sql"
-	"fmt"
 	"sort"
 	"strings"
 	"time"
 
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/node-crawler/pkg/crawlerdb"
 	"github.com/ethereum/node-crawler/pkg/vparser"
 )
@@ -39,7 +39,7 @@ func CreateDB(db *sql.DB) error {
 }
 
 func InsertCrawledNodes(db *sql.DB, crawledNodes []crawlerdb.CrawledNode) error {
-	fmt.Printf("Writing nodes to db: %v\n", len(crawledNodes))
+	log.Info("Writing nodes to db", "len", len(crawledNodes))
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -121,7 +121,7 @@ func InsertCrawledNodes(db *sql.DB, crawledNodes []crawlerdb.CrawledNode) error 
 }
 
 func DropOldNodes(db *sql.DB, minTimePassed time.Duration) error {
-	fmt.Printf("Dropping all nodes older than: %v\n", minTimePassed)
+	log.Info("Dropping nodes", "older than", minTimePassed)
 	oldest := time.Now().Add(-minTimePassed)
 	tx, err := db.Begin()
 	if err != nil {
@@ -136,6 +136,6 @@ func DropOldNodes(db *sql.DB, minTimePassed time.Duration) error {
 		return err
 	}
 	affected, _ := res.RowsAffected()
-	fmt.Printf("Dropped %v nodes\n", affected)
+	log.Info("Nodes drop", "affected", affected)
 	return tx.Commit()
 }

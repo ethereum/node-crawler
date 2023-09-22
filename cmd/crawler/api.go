@@ -9,6 +9,7 @@ import (
 
 	_ "modernc.org/sqlite"
 
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/node-crawler/pkg/api"
 	"github.com/ethereum/node-crawler/pkg/apidb"
 	"github.com/ethereum/node-crawler/pkg/crawlerdb"
@@ -58,7 +59,7 @@ func startAPI(ctx *cli.Context) error {
 		return err
 	}
 	if shouldInit {
-		fmt.Println("DB did not exist, init")
+		log.Info("DB did not exist, init")
 		if err := apidb.CreateDB(nodeDB); err != nil {
 			return err
 		}
@@ -104,7 +105,7 @@ func transferNewNodes(crawlerDB, nodeDB *sql.DB) error {
 			// happen. We will still try again.
 			return fmt.Errorf("error inserting nodes: %w", err)
 		}
-		fmt.Printf("%d nodes inserted\n", len(nodes))
+		log.Info("Nodes inserted", "len", len(nodes))
 	}
 
 	crawlerDBTx.Commit()
@@ -123,7 +124,7 @@ func newNodeDeamon(wg *sync.WaitGroup, crawlerDB, nodeDB *sql.DB) {
 	for {
 		err := transferNewNodes(crawlerDB, nodeDB)
 		if err != nil {
-			fmt.Printf("error transferring new nodes: %s\n", err)
+			log.Error("Failure in transferring new nodes", "err", err)
 			time.Sleep(retryTimeout)
 			retryTimeout *= 2
 			continue

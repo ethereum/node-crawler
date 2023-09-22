@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/gorilla/mux"
 	lru "github.com/hashicorp/golang-lru"
 )
@@ -39,7 +40,7 @@ func (a *Api) dropCacheLoop() {
 	// Drop the cache every 2 minutes
 	ticker := time.NewTicker(2 * time.Minute)
 	for range ticker.C {
-		fmt.Println("Dropping Cache")
+		log.Info("Dropping Cache")
 		c, err := lru.New(256)
 		if err != nil {
 			panic(err)
@@ -54,7 +55,7 @@ func (a *Api) HandleRequests(wg *sync.WaitGroup) {
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("Hello")) })
 	router.HandleFunc("/v1/dashboard", a.handleDashboard).Queries("filter", "{filter}")
 	router.HandleFunc("/v1/dashboard", a.handleDashboard)
-	fmt.Println("Starting API on:", a.address)
+	log.Info("Starting API", "address", a.address)
 	http.ListenAndServe(a.address, router)
 }
 
@@ -143,7 +144,7 @@ func (a *Api) cachedOrQuery(prefix, query string, whereArgs []interface{}) []cli
 		var err error
 		result, err = clientQuery(a.db, query, whereArgs...)
 		if err != nil {
-			fmt.Println(err)
+			log.Error("Failure in the query", "err", err)
 		}
 	}
 	return result
@@ -189,7 +190,7 @@ func (a *Api) handleDashboard(rw http.ResponseWriter, r *http.Request) {
 	// Where
 	where, whereArgs, err := addFilterArgs(vars)
 	if err != nil {
-		fmt.Println(err)
+		log.Error("Failure when adding filter to the query", "err", err)
 		return
 	}
 	if whereArgs != nil {
