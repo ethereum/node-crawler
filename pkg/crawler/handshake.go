@@ -8,9 +8,9 @@ import (
 	"net"
 	"time"
 
-	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/forkid"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
@@ -19,8 +19,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p/rlpx"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/node-crawler/pkg/common"
-
-	"github.com/pkg/errors"
 )
 
 var (
@@ -38,7 +36,7 @@ func getClientInfo(genesis *core.Genesis, networkID uint64, nodeURL string, n *e
 	defer conn.Close()
 
 	if err = conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
-		return nil, errors.Wrap(err, "cannot set conn deadline")
+		return nil, fmt.Errorf("cannot set conn deadline: %w", err)
 	}
 
 	if err = writeHello(conn, sk); err != nil {
@@ -54,10 +52,10 @@ func getClientInfo(genesis *core.Genesis, networkID uint64, nodeURL string, n *e
 	}
 
 	if err = conn.SetDeadline(time.Now().Add(15 * time.Second)); err != nil {
-		return nil, errors.Wrap(err, "cannot set conn deadline")
+		return nil, fmt.Errorf("cannot set conn deadline: %w", err)
 	}
 
-	s := getStatus(genesis.Config, uint32(conn.negotiatedProtoVersion), genesis.ToBlock().Hash(), networkID, nodeURL)
+	s := getStatus(genesis.Config, uint32(conn.negotiatedProtoVersion), genesis.ToBlock(), networkID, nodeURL)
 	if err = conn.Write(s); err != nil {
 		return nil, err
 	}
@@ -89,7 +87,7 @@ func dial(n *enode.Node) (*Conn, *ecdsa.PrivateKey, error) {
 	conn.Conn = rlpx.NewConn(fd, n.Pubkey())
 
 	if err = conn.SetDeadline(time.Now().Add(15 * time.Second)); err != nil {
-		return nil, nil, errors.Wrap(err, "cannot set conn deadline")
+		return nil, nil, fmt.Errorf("cannot set conn deadline: %w", err)
 	}
 
 	// do encHandshake
@@ -146,14 +144,14 @@ func readHello(conn *Conn, info *common.ClientInfo) error {
 	}
 }
 
-func getStatus(config *params.ChainConfig, version uint32, genesis ethCommon.Hash, network uint64, nodeURL string) *Status {
+func getStatus(config *params.ChainConfig, version uint32, genesis *ethTypes.Block, network uint64, nodeURL string) *Status {
 	if _status == nil {
 		_status = &Status{
 			ProtocolVersion: version,
 			NetworkID:       network,
 			TD:              big.NewInt(0),
-			Head:            genesis,
-			Genesis:         genesis,
+			Head:            genesis.Hash(),
+			Genesis:         genesis.Hash(),
 			ForkID:          forkid.NewID(config, genesis, 0, 0),
 		}
 	}

@@ -28,7 +28,7 @@
         };
 
         packages = {
-          nodeCrawler = pkgs.buildGoModule rec {
+          nodeCrawler = pkgs.buildGo121Module rec {
             pname = "crawler";
             version = "0.0.0";
 
@@ -64,7 +64,7 @@
 
         devshells.default = {
           packages = with pkgs; [
-            go
+            go_1_21
             golangci-lint
             nodejs
             sqlite
