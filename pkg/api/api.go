@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/log"
@@ -49,8 +48,7 @@ func (a *Api) dropCacheLoop() {
 	}
 }
 
-func (a *Api) HandleRequests(wg *sync.WaitGroup) {
-	defer wg.Done()
+func (a *Api) HandleRequests() {
 	router := mux.NewRouter().StrictSlash(true)
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) { w.Write([]byte("Hello")) })
 	router.HandleFunc("/v1/dashboard", a.handleDashboard).Queries("filter", "{filter}")
