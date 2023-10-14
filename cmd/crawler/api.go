@@ -22,22 +22,26 @@ var (
 		Usage:  "API server for the crawler",
 		Action: startAPI,
 		Flags: []cli.Flag{
-			&apiDBFlag,
-			&apiListenAddrFlag,
-			&autovacuumFlag,
-			&busyTimeoutFlag,
-			&crawlerDBFlag,
-			&dropNodesTimeFlag,
+			apiDBFlag,
+			apiListenAddrFlag,
+			autovacuumFlag,
+			busyTimeoutFlag,
+			crawlerDBFlag,
+			dropNodesTimeFlag,
 		},
 	}
 )
 
 func startAPI(ctx *cli.Context) error {
-	autovacuum := ctx.String(autovacuumFlag.Name)
-	busyTimeout := ctx.Uint64(busyTimeoutFlag.Name)
+	var (
+		crawlerDBPath = ctx.String(crawlerDBFlag.Name)
+		apiDBPath     = ctx.String(apiDBFlag.Name)
+		autovacuum    = ctx.String(autovacuumFlag.Name)
+		busyTimeout   = ctx.Uint64(busyTimeoutFlag.Name)
+	)
 
 	crawlerDB, err := openSQLiteDB(
-		ctx.String(crawlerDBFlag.Name),
+		crawlerDBPath,
 		autovacuum,
 		busyTimeout,
 	)
@@ -45,7 +49,6 @@ func startAPI(ctx *cli.Context) error {
 		return err
 	}
 
-	apiDBPath := ctx.String(apiDBFlag.Name)
 	shouldInit := false
 	if _, err := os.Stat(apiDBPath); os.IsNotExist(err) {
 		shouldInit = true
@@ -64,6 +67,8 @@ func startAPI(ctx *cli.Context) error {
 			return err
 		}
 	}
+
+	// Start daemons
 	var wg sync.WaitGroup
 	wg.Add(3)
 
@@ -77,7 +82,6 @@ func startAPI(ctx *cli.Context) error {
 		defer wg.Done()
 		dropDaemon(nodeDB, ctx.Duration(dropNodesTimeFlag.Name))
 	}()
-
 	// Start the API deamon
 	apiAddress := ctx.String(apiListenAddrFlag.Name)
 	apiDaemon := api.New(apiAddress, nodeDB)
