@@ -41,18 +41,18 @@ var (
 		Usage:  "Crawl the ethereum network",
 		Action: crawlNodes,
 		Flags: []cli.Flag{
-			&autovacuumFlag,
-			&bootnodesFlag,
-			&busyTimeoutFlag,
-			&crawlerDBFlag,
-			&geoipdbFlag,
-			&listenAddrFlag,
-			&nodeFileFlag,
-			&nodeURLFlag,
-			&nodedbFlag,
-			&nodekeyFlag,
-			&timeoutFlag,
-			&workersFlag,
+			autovacuumFlag,
+			bootnodesFlag,
+			busyTimeoutFlag,
+			crawlerDBFlag,
+			geoipdbFlag,
+			listenAddrFlag,
+			nodeFileFlag,
+			nodeURLFlag,
+			nodedbFlag,
+			nodekeyFlag,
+			timeoutFlag,
+			workersFlag,
 			utils.GoerliFlag,
 			utils.NetworkIdFlag,
 			utils.SepoliaFlag,
@@ -77,8 +77,8 @@ func crawlNodes(ctx *cli.Context) error {
 		if _, err := os.Stat(name); os.IsNotExist(err) {
 			shouldInit = true
 		}
-		var err error
 
+		var err error
 		db, err = openSQLiteDB(
 			name,
 			ctx.String(autovacuumFlag.Name),

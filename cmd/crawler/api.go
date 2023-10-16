@@ -22,22 +22,26 @@ var (
 		Usage:  "API server for the crawler",
 		Action: startAPI,
 		Flags: []cli.Flag{
-			&apiDBFlag,
-			&apiListenAddrFlag,
-			&autovacuumFlag,
-			&busyTimeoutFlag,
-			&crawlerDBFlag,
-			&dropNodesTimeFlag,
+			apiDBFlag,
+			apiListenAddrFlag,
+			autovacuumFlag,
+			busyTimeoutFlag,
+			crawlerDBFlag,
+			dropNodesTimeFlag,
 		},
 	}
 )
 
 func startAPI(ctx *cli.Context) error {
-	autovacuum := ctx.String(autovacuumFlag.Name)
-	busyTimeout := ctx.Uint64(busyTimeoutFlag.Name)
+	var (
+		crawlerDBPath = ctx.String(crawlerDBFlag.Name)
+		apiDBPath     = ctx.String(apiDBFlag.Name)
+		autovacuum    = ctx.String(autovacuumFlag.Name)
+		busyTimeout   = ctx.Uint64(busyTimeoutFlag.Name)
+	)
 
 	crawlerDB, err := openSQLiteDB(
-		ctx.String(crawlerDBFlag.Name),
+		crawlerDBPath,
 		autovacuum,
 		busyTimeout,
 	)
@@ -45,7 +49,6 @@ func startAPI(ctx *cli.Context) error {
 		return err
 	}
 
-	apiDBPath := ctx.String(apiDBFlag.Name)
 	shouldInit := false
 	if _, err := os.Stat(apiDBPath); os.IsNotExist(err) {
 		shouldInit = true
@@ -64,17 +67,28 @@ func startAPI(ctx *cli.Context) error {
 			return err
 		}
 	}
+
+	// Start daemons
 	var wg sync.WaitGroup
 	wg.Add(3)
 
-	// Start reading deamon
-	go newNodeDeamon(&wg, crawlerDB, nodeDB)
-	go dropDeamon(&wg, nodeDB, ctx.Duration(dropNodesTimeFlag.Name))
-
+	// Start reading daemon
+	go func() {
+		defer wg.Done()
+		newNodeDaemon(crawlerDB, nodeDB)
+	}()
+	// Start the drop daemon
+	go func() {
+		defer wg.Done()
+		dropDaemon(nodeDB, ctx.Duration(dropNodesTimeFlag.Name))
+	}()
 	// Start the API deamon
 	apiAddress := ctx.String(apiListenAddrFlag.Name)
-	apiDeamon := api.New(apiAddress, nodeDB)
-	go apiDeamon.HandleRequests(&wg)
+	apiDaemon := api.New(apiAddress, nodeDB)
+	go func() {
+		defer wg.Done()
+		apiDaemon.HandleRequests()
+	}()
 	wg.Wait()
 
 	return nil
@@ -111,13 +125,10 @@ func transferNewNodes(crawlerDB, nodeDB *sql.DB) error {
 	return nil
 }
 
-// newNodeDeamon reads new nodes from the crawler and puts them in the db
+// newNodeDaemon reads new nodes from the crawler and puts them in the db
 // Might trigger the invalidation of caches for the api in the future
-func newNodeDeamon(wg *sync.WaitGroup, crawlerDB, nodeDB *sql.DB) {
-	defer wg.Done()
-
-	// This is so that we can make some kind of exponential backoff for the
-	// retries.
+func newNodeDaemon(crawlerDB, nodeDB *sql.DB) {
+	// Exponentially increase the backoff time
 	retryTimeout := time.Minute
 
 	for {
@@ -134,8 +145,7 @@ func newNodeDeamon(wg *sync.WaitGroup, crawlerDB, nodeDB *sql.DB) {
 	}
 }
 
-func dropDeamon(wg *sync.WaitGroup, db *sql.DB, dropTimeout time.Duration) {
-	defer wg.Done()
+func dropDaemon(db *sql.DB, dropTimeout time.Duration) {
 	ticker := time.NewTicker(10 * time.Minute)
 	defer ticker.Stop()
 

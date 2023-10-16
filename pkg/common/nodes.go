@@ -103,15 +103,15 @@ func (ns NodeSet) TopN(n int) NodeSet {
 		return ns
 	}
 
-	byscore := make([]NodeJSON, 0, len(ns))
+	byScore := make([]NodeJSON, 0, len(ns))
 	for _, v := range ns {
-		byscore = append(byscore, v)
+		byScore = append(byScore, v)
 	}
-	sort.Slice(byscore, func(i, j int) bool {
-		return byscore[i].Score >= byscore[j].Score
+	sort.Slice(byScore, func(i, j int) bool {
+		return byScore[i].Score >= byScore[j].Score
 	})
 	result := make(NodeSet, n)
-	for _, v := range byscore[:n] {
+	for _, v := range byScore[:n] {
 		result[v.N.ID()] = v
 	}
 	return result
