@@ -84,7 +84,8 @@ func UpdateNodes(db *sql.DB, geoipDB *geoip2.Reader, nodes []common.NodeJSON) er
 		if n.N.Load(&eth2) == nil {
 			info.ClientType = "eth2"
 			var dat beacon.Eth2Data
-			if err := dat.Deserialize(codec.NewDecodingReader(bytes.NewReader(eth2), uint64(len(eth2)))); err == nil {
+			err = dat.Deserialize(codec.NewDecodingReader(bytes.NewReader(eth2), uint64(len(eth2))))
+			if err == nil {
 				fid = fmt.Sprintf("Hash: %v, Next %v", dat.ForkDigest, dat.NextForkEpoch)
 			}
 		}
