@@ -42,6 +42,7 @@ type Crawler struct {
 	Workers    uint64
 	Sepolia    bool
 	Goerli     bool
+	Holesky    bool
 
 	NodeDB *enode.DB
 }
@@ -357,6 +358,9 @@ func (c Crawler) makeGenesis() *core.Genesis {
 	}
 	if c.Goerli {
 		return core.DefaultGoerliGenesisBlock()
+	}
+	if c.Holesky {
+		return core.DefaultHoleskyGenesisBlock()
 	}
 
 	return core.DefaultGenesisBlock()

@@ -188,7 +188,7 @@
               network = {
                 type = types.str;
                 default = "mainnet";
-                example = "goerli";
+                example = "holesky";
                 description = "Name of the network to crawl. Defaults to Mainnet.";
               };
             };
@@ -209,6 +209,7 @@
                       "--geoipdb=${cfg.crawler.geoipdb}"
                     ]
                     ++ optional (cfg.crawler.network == "goerli") "--goerli"
+                    ++ optional (cfg.crawler.network == "holesky") "--holesky"
                     ++ optional (cfg.crawler.network == "sepolia") "--sepolia";
                   in
                   "${pkgs.nodeCrawler}/bin/crawler crawl ${concatStringsSep " " args}";
