@@ -152,7 +152,7 @@ docker-compose up
 [Nix](https://nixos.org/) is a package manager and system configuration tool
 and language for reproducible, declarative, and reliable systems.
 
-The Nix [Flake](https://nixos.wiki/wiki/Flakes) in this repo contains all the
+The Nix [Flake](https://wiki.nixos.org/wiki/Flakes) in this repo contains all the
 dependencies needed to build the frontend and crawler.
 
 The `flake.lock` file locks the commit which the package manager uses to build
@@ -173,7 +173,7 @@ more about Nix and direnv [here](https://github.com/direnv/direnv/wiki/Nix).
 [Nix](https://nixos.org/) is a package manager and system configuration tool
 and language for reproducible, declarative, and reliable systems.
 
-The Nix [Flake](https://nixos.wiki/wiki/Flakes) in this repo also contains a
+The Nix [Flake](https://wiki.nixos.org/wiki/Flakes) in this repo also contains a
 NixOS module for configuring and deploying the node-crawler, API, and Nginx.
 
 There is just a little bit of extra configuration which is needed to bring
