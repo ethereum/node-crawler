@@ -33,15 +33,6 @@ var (
 		Name:  "log.json",
 		Usage: "Format logs with JSON",
 	}
-	backtraceAtFlag = cli.StringFlag{
-		Name:  "log.backtrace",
-		Usage: "Request a stack trace at a specific logging statement (e.g. \"block.go:271\")",
-		Value: "",
-	}
-	debugFlag = cli.BoolFlag{
-		Name:  "log.debug",
-		Usage: "Prepends log messages with call-site location (file and line number)",
-	}
 	pprofFlag = cli.BoolFlag{
 		Name:  "pprof",
 		Usage: "Enable the pprof HTTP server",
@@ -77,10 +68,8 @@ var (
 
 // Flags holds all command-line flags required for debugging.
 var Flags = []cli.Flag{
-	&backtraceAtFlag,
 	&blockprofilerateFlag,
 	&cpuprofileFlag,
-	&debugFlag,
 	&logjsonFlag,
 	&memprofilerateFlag,
 	&pprofAddrFlag,
@@ -94,43 +83,33 @@ var Flags = []cli.Flag{
 var glogger *log.GlogHandler
 
 func init() {
-	glogger = log.NewGlogHandler(log.StreamHandler(os.Stderr, log.TerminalFormat(false)))
+	terminalOutput := io.Writer(os.Stderr)
+	glogger := log.NewGlogHandler(log.NewTerminalHandler(terminalOutput, false))
 	glogger.Verbosity(log.LvlInfo)
-	log.Root().SetHandler(glogger)
+	log.SetDefault(log.NewLogger(glogger))
 }
 
 // Setup initializes profiling and logging based on the CLI flags.
 // It should be called as early as possible in the program.
 func Setup(ctx *cli.Context) error {
-	var ostream log.Handler
 	output := io.Writer(os.Stderr)
 	if ctx.Bool(logjsonFlag.Name) {
-		ostream = log.StreamHandler(output, log.JSONFormat())
+		glogger = log.NewGlogHandler(log.JSONHandler(output))
 	} else {
 		usecolor := (isatty.IsTerminal(os.Stderr.Fd()) || isatty.IsCygwinTerminal(os.Stderr.Fd())) && os.Getenv("TERM") != "dumb"
 		if usecolor {
 			output = colorable.NewColorableStderr()
 		}
-		ostream = log.StreamHandler(output, log.TerminalFormat(usecolor))
+		glogger = log.NewGlogHandler(log.NewTerminalHandler(output, usecolor))
 	}
-	glogger.SetHandler(ostream)
 
 	// logging
 	verbosity := ctx.Int(verbosityFlag.Name)
-	glogger.Verbosity(log.Lvl(verbosity))
+	glogger.Verbosity(log.FromLegacyLevel(verbosity))
 	vmodule := ctx.String(vmoduleFlag.Name)
 	glogger.Vmodule(vmodule)
 
-	debug := ctx.Bool(debugFlag.Name)
-	if ctx.IsSet(debugFlag.Name) {
-		debug = ctx.Bool(debugFlag.Name)
-	}
-	log.PrintOrigins(debug)
-
-	backtrace := ctx.String(backtraceAtFlag.Name)
-	glogger.BacktraceAt(backtrace)
-
-	log.Root().SetHandler(glogger)
+	log.SetDefault(log.NewLogger(glogger))
 
 	// profiling, tracing
 	runtime.MemProfileRate = memprofilerateFlag.Value

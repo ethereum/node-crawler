@@ -53,7 +53,7 @@ var (
 			nodekeyFlag,
 			timeoutFlag,
 			workersFlag,
-			utils.GoerliFlag,
+			utils.HoodiFlag,
 			utils.NetworkIdFlag,
 			utils.SepoliaFlag,
 		},
@@ -118,7 +118,7 @@ func crawlNodes(ctx *cli.Context) error {
 		Timeout:    ctx.Duration(timeoutFlag.Name),
 		Workers:    ctx.Uint64(workersFlag.Name),
 		Sepolia:    ctx.Bool(utils.SepoliaFlag.Name),
-		Goerli:     ctx.Bool(utils.GoerliFlag.Name),
+		Hoodi:      ctx.Bool(utils.HoodiFlag.Name),
 		NodeDB:     nodeDB,
 	}
 

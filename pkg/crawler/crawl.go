@@ -41,7 +41,7 @@ type Crawler struct {
 	Timeout    time.Duration
 	Workers    uint64
 	Sepolia    bool
-	Goerli     bool
+	Hoodi      bool
 
 	NodeDB *enode.DB
 }
@@ -355,8 +355,8 @@ func (c Crawler) makeGenesis() *core.Genesis {
 	if c.Sepolia {
 		return core.DefaultSepoliaGenesisBlock()
 	}
-	if c.Goerli {
-		return core.DefaultGoerliGenesisBlock()
+	if c.Hoodi {
+		return core.DefaultHoodiGenesisBlock()
 	}
 
 	return core.DefaultGenesisBlock()
