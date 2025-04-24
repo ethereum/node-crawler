@@ -171,6 +171,7 @@ func getStatus(config *params.ChainConfig, version uint32, genesis *ethTypes.Blo
 
 		_status.Head = header.Hash()
 		_status.ForkID = forkid.NewID(config, genesis, header.Number.Uint64(), header.Time)
+		lastStatusUpdate = time.Now()
 	}
 
 	return _status
